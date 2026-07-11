@@ -3,6 +3,16 @@ import { apiFetch } from '@/api/client';
 import { useAuthStore, type MongoUser } from '@/store/useAuthStore';
 import type { Entry } from '@/api/hooks/entries';
 
+export type PublicUser = { _id: string; username: string; displayName: string; avatarKey: string | null };
+
+export function useUserProfile(id: string | null) {
+  return useQuery({
+    queryKey: ['users', id],
+    queryFn: () => apiFetch<{ user: PublicUser }>(`/users/${id}`),
+    enabled: !!id,
+  });
+}
+
 export function useScrapbook() {
   return useQuery({
     queryKey: ['users', 'me', 'scrapbook'],

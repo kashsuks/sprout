@@ -30,6 +30,44 @@ export function useSendFriendRequest() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (toUserId: string) => apiFetch('/friends/requests', { method: 'POST', body: { toUserId } }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['friends'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['friends'] });
+    },
+  });
+}
+
+export type FriendRequest = { _id: string; userA: string; userB: string; requestedBy: string; status: string };
+
+export function useIncomingRequests() {
+  return useQuery({
+    queryKey: ['friends', 'requests', 'incoming'],
+    queryFn: () => apiFetch<{ requests: FriendRequest[] }>('/friends/requests/incoming'),
+  });
+}
+
+export function useOutgoingRequests() {
+  return useQuery({
+    queryKey: ['friends', 'requests', 'outgoing'],
+    queryFn: () => apiFetch<{ requests: FriendRequest[] }>('/friends/requests/outgoing'),
+  });
+}
+
+function invalidateFriendState(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ['friends'] });
+}
+
+export function useAcceptFriendRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (friendshipId: string) => apiFetch(`/friends/requests/${friendshipId}/accept`, { method: 'POST' }),
+    onSuccess: () => invalidateFriendState(queryClient),
+  });
+}
+
+export function useDeclineFriendRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (friendshipId: string) => apiFetch<void>(`/friends/requests/${friendshipId}/decline`, { method: 'POST' }),
+    onSuccess: () => invalidateFriendState(queryClient),
   });
 }

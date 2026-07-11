@@ -12,6 +12,7 @@ import TasksScreen from '@/screens/TasksScreen';
 import CompleteStampScreen from '@/screens/CompleteStampScreen';
 import SquadScreen from '@/screens/SquadScreen';
 import LinkDuoScreen from '@/screens/LinkDuoScreen';
+import AddFriendsScreen from '@/screens/AddFriendsScreen';
 import ProfileScreen from '@/screens/ProfileScreen';
 import WrappedScreen from '@/screens/WrappedScreen';
 
@@ -30,12 +31,13 @@ function TasksStackNavigator() {
   );
 }
 
-// Squad tab also hosts the "link duo" sub-screen.
+// Squad tab also hosts the "link duo" and "add friends" sub-screens.
 function SquadStackNavigator() {
   return (
     <SquadStack.Navigator screenOptions={{ headerShown: false }}>
       <SquadStack.Screen name="Squad" component={SquadScreen} />
       <SquadStack.Screen name="LinkDuo" component={LinkDuoScreen} />
+      <SquadStack.Screen name="AddFriends" component={AddFriendsScreen} />
     </SquadStack.Navigator>
   );
 }

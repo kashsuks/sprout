@@ -13,7 +13,12 @@ export default function SquadScreen({ navigation }: any) {
 
   return (
     <Screen contentStyle={{ paddingTop: 4 }}>
-      <Text style={[textStyles.appLogo, { color: colors.ink, marginBottom: 12 }]}>squad</Text>
+      <View style={styles.header}>
+        <Text style={[textStyles.appLogo, { color: colors.ink }]}>squad</Text>
+        <Pressable style={styles.addFriendsBtn} onPress={() => navigation?.navigate('AddFriends')}>
+          <Text style={styles.addFriendsBtnText}>+ add friends</Text>
+        </Pressable>
+      </View>
 
       <Text style={styles.sectionLabel}>your duo</Text>
       {isLoading ? (
@@ -46,6 +51,16 @@ export default function SquadScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  addFriendsBtn: {
+    borderWidth: 1,
+    borderColor: colors.stamp,
+    borderRadius: 12,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  addFriendsBtnText: { fontFamily: fonts.mono, fontSize: 9.5, color: colors.stamp },
+
   sectionLabel: { ...textStyles.eyebrow, color: colors.inkSoft, marginBottom: 8 },
   emptyHint: { fontFamily: fonts.mono, fontSize: 10, color: colors.inkSoft, textAlign: 'center', paddingVertical: 14 },
 
