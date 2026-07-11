@@ -1,16 +1,19 @@
 import mongoose from "mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 
-let mongod: MongoMemoryServer | undefined;
+// A (single-member) replica set, not a standalone instance, because the
+// marketplace purchase flow uses a multi-document Mongo transaction, which
+// standalone MongoDB doesn't support.
+let replSet: MongoMemoryReplSet | undefined;
 
 export async function connectTestDb(): Promise<void> {
-  mongod = await MongoMemoryServer.create();
-  await mongoose.connect(mongod.getUri());
+  replSet = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
+  await mongoose.connect(replSet.getUri());
 }
 
 export async function disconnectTestDb(): Promise<void> {
   await mongoose.disconnect();
-  await mongod?.stop();
+  await replSet?.stop();
 }
 
 export async function clearTestDb(): Promise<void> {

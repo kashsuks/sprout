@@ -5,6 +5,14 @@ import { attachMongoUser } from "./middleware/attachMongoUser";
 import { errorHandler } from "./middleware/errorHandler";
 import { verifyFirebaseToken } from "./middleware/verifyFirebaseToken";
 import { authRouter } from "./routes/auth";
+import { duoRouter } from "./routes/duo";
+import { entriesRouter } from "./routes/entries";
+import { feedRouter } from "./routes/feed";
+import { friendsRouter } from "./routes/friends";
+import { goalsRouter } from "./routes/goals";
+import { leaderboardRouter } from "./routes/leaderboard";
+import { marketplaceRouter } from "./routes/marketplace";
+import { pinsRouter } from "./routes/pins";
 import { usersRouter } from "./routes/users";
 
 export function createApp(): Express {
@@ -24,6 +32,14 @@ export function createApp(): Express {
   app.use("/api/v1", verifyFirebaseToken, attachMongoUser);
   app.use("/api/v1/auth", authRouter);
   app.use("/api/v1/users", usersRouter);
+  app.use("/api/v1/goals", goalsRouter);
+  app.use("/api/v1/entries", entriesRouter);
+  app.use("/api/v1/friends", friendsRouter);
+  app.use("/api/v1/feed", feedRouter);
+  app.use("/api/v1/duo", duoRouter);
+  app.use("/api/v1/leaderboard", leaderboardRouter);
+  app.use("/api/v1/pins", pinsRouter);
+  app.use("/api/v1/marketplace", marketplaceRouter);
 
   app.use(errorHandler);
 
