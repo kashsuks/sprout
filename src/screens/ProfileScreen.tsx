@@ -1,20 +1,21 @@
 import React from 'react';
-import { View, Text, StyleSheet, Switch, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Switch, Pressable, Image, ActivityIndicator } from 'react-native';
 import { colors } from '@/theme/colors';
 import { fonts, textStyles } from '@/theme/typography';
 import { Screen } from '@/components/Screen';
-import { PhotoTile } from '@/components/PhotoTile';
 import { FlameIcon } from '@/components/FlameIcon';
-import { useAppStore } from '@/store/useAppStore';
-
-const SCRAPBOOK: Array<'run' | 'gym' | 'read' | 'books'> = ['run', 'gym', 'read', 'books'];
+import { useAuthStore } from '@/store/useAuthStore';
+import { useScrapbook, useUpdatePrivacy } from '@/api/hooks/users';
+import { usePins } from '@/api/hooks/pins';
 
 export default function ProfileScreen({ navigation }: any) {
-  const streakDays = useAppStore((s) => s.streakDays);
-  const points = useAppStore((s) => s.points);
-  const pins = useAppStore((s) => s.pins);
-  const privacy = useAppStore((s) => s.privacy);
-  const togglePrivacy = useAppStore((s) => s.togglePrivacy);
+  const mongoUser = useAuthStore((s) => s.mongoUser);
+  const updatePrivacy = useUpdatePrivacy();
+  const { data: pinsData } = usePins();
+  const { data: scrapbookData, isLoading: scrapbookLoading } = useScrapbook();
+
+  const earnedPins = (pinsData?.pins ?? []).filter((p) => p.earned);
+  const scrapbook = scrapbookData?.entries ?? [];
 
   return (
     <Screen contentStyle={{ paddingTop: 4 }}>
@@ -22,45 +23,58 @@ export default function ProfileScreen({ navigation }: any) {
 
       <View style={styles.idCard}>
         <View style={styles.idPhoto}>
-          <Text style={styles.idInitial}>E</Text>
+          <Text style={styles.idInitial}>{mongoUser?.displayName[0]?.toUpperCase() ?? '?'}</Text>
         </View>
         <View>
-          <Text style={styles.idName}>eason</Text>
+          <Text style={styles.idName}>{mongoUser?.displayName ?? ''}</Text>
           <View style={styles.idMetaRow}>
             <FlameIcon size={11} color={colors.stamp} />
-            <Text style={styles.idMeta}> day {streakDays} streak · {points} pts</Text>
+            <Text style={styles.idMeta}> day {mongoUser?.currentStreak ?? 0} streak · {mongoUser?.points ?? 0} pts</Text>
           </View>
         </View>
       </View>
 
       <Text style={styles.sectionLabel}>collected pins</Text>
-      <View style={styles.pins}>
-        {pins.map((pin, i) => (
-          <View key={i} style={styles.pin}>
-            <Text style={{ fontSize: 13 }}>{pin}</Text>
-          </View>
-        ))}
-      </View>
+      {earnedPins.length === 0 ? (
+        <Text style={styles.emptyHint}>no pins earned yet</Text>
+      ) : (
+        <View style={styles.pins}>
+          {earnedPins.map((pin) => (
+            <View key={pin.key} style={styles.pin}>
+              <Text style={{ fontSize: 13 }}>{pin.emoji}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
-      <Pressable style={styles.privacyRow} onPress={togglePrivacy}>
+      <Pressable
+        style={styles.privacyRow}
+        onPress={() => updatePrivacy.mutate(!mongoUser?.friendsOnlyProfile)}
+      >
         <Text style={styles.privacyLabel}>friends-only visibility</Text>
         <Switch
-          value={privacy}
-          onValueChange={togglePrivacy}
+          value={mongoUser?.friendsOnlyProfile ?? true}
+          onValueChange={(v) => updatePrivacy.mutate(v)}
           trackColor={{ false: colors.line, true: colors.forest }}
           thumbColor={colors.white}
         />
       </Pressable>
 
       <Text style={styles.sectionLabel}>scrapbook</Text>
-      <View style={styles.filmstrip}>
-        {SCRAPBOOK.map((type) => (
-          <PhotoTile key={type} type={type} style={styles.frame} />
-        ))}
-      </View>
+      {scrapbookLoading ? (
+        <ActivityIndicator color={colors.stamp} style={{ marginBottom: 18 }} />
+      ) : scrapbook.length === 0 ? (
+        <Text style={styles.emptyHint}>nothing stamped yet</Text>
+      ) : (
+        <View style={styles.filmstrip}>
+          {scrapbook.map((entry) => (
+            <Image key={entry._id} source={{ uri: entry.photoUrl }} style={styles.frame} resizeMode="cover" />
+          ))}
+        </View>
+      )}
 
       <Pressable style={styles.recapBtn} onPress={() => navigation?.navigate('Wrapped')}>
-        <Text style={styles.recapBtnText}>view june recap →</Text>
+        <Text style={styles.recapBtnText}>view recap →</Text>
       </Pressable>
     </Screen>
   );
@@ -82,8 +96,9 @@ const styles = StyleSheet.create({
   idMeta: { fontFamily: fonts.mono, fontSize: 9.5, color: colors.inkSoft },
 
   sectionLabel: { ...textStyles.eyebrow, color: colors.inkSoft, marginBottom: 8 },
+  emptyHint: { fontFamily: fonts.mono, fontSize: 10, color: colors.inkSoft, marginBottom: 18 },
 
-  pins: { flexDirection: 'row', gap: 6, marginBottom: 18 },
+  pins: { flexDirection: 'row', gap: 6, marginBottom: 18, flexWrap: 'wrap' },
   pin: {
     width: 28,
     height: 28,
@@ -108,8 +123,8 @@ const styles = StyleSheet.create({
   },
   privacyLabel: { fontFamily: fonts.mono, fontSize: 10, color: colors.ink },
 
-  filmstrip: { flexDirection: 'row', gap: 6, marginBottom: 18 },
-  frame: { width: 60, height: 60, borderRadius: 4 },
+  filmstrip: { flexDirection: 'row', gap: 6, marginBottom: 18, flexWrap: 'wrap' },
+  frame: { width: 60, height: 60, borderRadius: 4, backgroundColor: colors.forestBg },
 
   recapBtn: {
     borderWidth: 1.5,

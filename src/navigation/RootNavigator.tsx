@@ -9,7 +9,6 @@ import { FeedIcon, LeaderboardIcon, NewEntryIcon, SquadIcon, ProfileIcon } from 
 import FeedScreen from '@/screens/FeedScreen';
 import RanksScreen from '@/screens/RanksScreen';
 import TasksScreen from '@/screens/TasksScreen';
-import TagPickerScreen from '@/screens/TagPickerScreen';
 import CompleteStampScreen from '@/screens/CompleteStampScreen';
 import SquadScreen from '@/screens/SquadScreen';
 import LinkDuoScreen from '@/screens/LinkDuoScreen';
@@ -21,13 +20,11 @@ const TasksStack = createNativeStackNavigator();
 const SquadStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
 
-// Tasks tab hosts a three-step flow: the task list, tagging a friend while
-// composing a new task, and stamping a task complete.
+// Tasks tab hosts a two-step flow: the task list and stamping a task complete.
 function TasksStackNavigator() {
   return (
     <TasksStack.Navigator screenOptions={{ headerShown: false }}>
       <TasksStack.Screen name="TasksList" component={TasksScreen} />
-      <TasksStack.Screen name="TagPicker" component={TagPickerScreen} />
       <TasksStack.Screen name="CompleteStamp" component={CompleteStampScreen} />
     </TasksStack.Navigator>
   );

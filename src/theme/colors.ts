@@ -49,3 +49,35 @@ export function avatarColorFor(seed: string): string {
   for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
   return avatarPalette[hash % avatarPalette.length];
 }
+
+export type ColorName = 'forest' | 'brass' | 'navy' | 'stamp' | 'ink';
+
+export function colorToken(name: string): string {
+  switch (name) {
+    case 'forest':
+      return colors.forest;
+    case 'brass':
+      return colors.brass;
+    case 'navy':
+      return colors.navy;
+    case 'stamp':
+      return colors.stamp;
+    default:
+      return colors.inkSoft;
+  }
+}
+
+export function colorBgToken(name: string): string {
+  switch (name) {
+    case 'forest':
+      return colors.forestBg;
+    case 'brass':
+      return colors.brassBg;
+    case 'navy':
+      return colors.navyBg;
+    case 'stamp':
+      return colors.stampBg;
+    default:
+      return colors.page;
+  }
+}

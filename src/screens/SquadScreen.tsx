@@ -1,58 +1,42 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { colors } from '@/theme/colors';
 import { fonts, textStyles } from '@/theme/typography';
 import { Screen } from '@/components/Screen';
-import { useAppStore, colorToken } from '@/store/useAppStore';
+import { FlameIcon } from '@/components/FlameIcon';
+import { useActiveDuo, useUnlinkDuo } from '@/api/hooks/duo';
 
 export default function SquadScreen({ navigation }: any) {
-  const squad = useAppStore((s) => s.squad);
-  const actNudge = useAppStore((s) => s.actNudge);
-  const pct = Math.min(100, Math.round((squad.current / squad.target) * 100));
+  const { data, isLoading } = useActiveDuo();
+  const unlinkDuo = useUnlinkDuo();
+  const duo = data?.duo;
 
   return (
     <Screen contentStyle={{ paddingTop: 4 }}>
       <Text style={[textStyles.appLogo, { color: colors.ink, marginBottom: 12 }]}>squad</Text>
 
-      <View style={styles.runway}>
-        <View style={styles.runwayTop}>
-          <Text style={styles.runwayLabel}>{squad.label}</Text>
-          <Text style={styles.runwayValue}>{squad.current}/{squad.target}</Text>
-        </View>
-        <View style={styles.track}>
-          <View style={[styles.trackFill, { width: `${pct}%` }]} />
-        </View>
-      </View>
-
-      <Text style={styles.sectionLabel}>nudges</Text>
-      {squad.nudges.map((n, i) => (
-        <View key={i} style={styles.nudgeRow}>
-          <View style={[styles.avatar, { backgroundColor: colorToken(n.color) }]}>
-            <Text style={styles.avatarText}>{n.name[0].toUpperCase()}</Text>
+      <Text style={styles.sectionLabel}>your duo</Text>
+      {isLoading ? (
+        <ActivityIndicator color={colors.stamp} style={{ marginVertical: 12 }} />
+      ) : duo ? (
+        <View style={styles.duoCard}>
+          <View style={styles.duoTop}>
+            <FlameIcon size={13} color={colors.stamp} />
+            <Text style={styles.duoTask}>{duo.taskTitle}</Text>
           </View>
-          {n.status === 'pending' ? (
-            <>
-              <Text style={styles.nudgeText}>{n.name}: "{n.text}"</Text>
-              <View style={styles.nudgeActions}>
-                <Pressable
-                  style={[styles.nudgeBtn, n.acted === 'accept' && styles.nudgeBtnOn]}
-                  onPress={() => actNudge(i, 'accept')}
-                >
-                  <Text style={[styles.nudgeBtnText, n.acted === 'accept' && styles.nudgeBtnTextOn]}>accept</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.nudgeBtn, n.acted === 'later' && styles.nudgeBtnOn]}
-                  onPress={() => actNudge(i, 'later')}
-                >
-                  <Text style={[styles.nudgeBtnText, n.acted === 'later' && styles.nudgeBtnTextOn]}>later</Text>
-                </Pressable>
-              </View>
-            </>
-          ) : (
-            <Text style={styles.nudgeText}>{n.name} {n.text}</Text>
-          )}
+          <Text style={styles.duoStreak}>{duo.streak} day streak · miss a day, both break</Text>
+          <Pressable style={styles.unlinkBtn} onPress={() => unlinkDuo.mutate(duo._id)}>
+            <Text style={styles.unlinkBtnText}>unlink</Text>
+          </Pressable>
         </View>
-      ))}
+      ) : (
+        <Text style={styles.emptyHint}>no active duo — link a task with a friend below</Text>
+      )}
+
+      <View style={styles.divider} />
+
+      <Text style={styles.sectionLabel}>squad goals</Text>
+      <Text style={styles.emptyHint}>multi-person squad goals aren't available yet</Text>
 
       <Pressable style={styles.manageLinkBtn} onPress={() => navigation?.navigate('LinkDuo')}>
         <Text style={styles.manageLinkText}>manage duo links</Text>
@@ -62,7 +46,10 @@ export default function SquadScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  runway: {
+  sectionLabel: { ...textStyles.eyebrow, color: colors.inkSoft, marginBottom: 8 },
+  emptyHint: { fontFamily: fonts.mono, fontSize: 10, color: colors.inkSoft, textAlign: 'center', paddingVertical: 14 },
+
+  duoCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.line,
@@ -70,36 +57,20 @@ const styles = StyleSheet.create({
     padding: 11,
     marginBottom: 14,
   },
-  runwayTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  runwayLabel: { fontFamily: fonts.monoBold, fontSize: 10, color: colors.ink },
-  runwayValue: { fontFamily: fonts.mono, fontSize: 10, color: colors.inkSoft },
-  track: { height: 5, backgroundColor: colors.line, borderRadius: 3, overflow: 'hidden' },
-  trackFill: { height: '100%', backgroundColor: colors.forest, borderRadius: 3 },
-
-  sectionLabel: { ...textStyles.eyebrow, color: colors.inkSoft, marginBottom: 4 },
-
-  nudgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.line,
-  },
-  avatar: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontFamily: fonts.display, fontSize: 11, color: colors.white },
-  nudgeText: { flex: 1, fontFamily: fonts.mono, fontSize: 10, color: colors.ink },
-  nudgeActions: { flexDirection: 'row', gap: 5, marginLeft: 'auto' },
-  nudgeBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 10,
+  duoTop: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  duoTask: { fontFamily: fonts.monoBold, fontSize: 11, color: colors.ink },
+  duoStreak: { fontFamily: fonts.mono, fontSize: 9.5, color: colors.inkSoft, marginBottom: 8 },
+  unlinkBtn: {
+    alignSelf: 'flex-start',
     borderWidth: 1,
     borderColor: colors.line,
+    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
   },
-  nudgeBtnOn: { backgroundColor: colors.forest, borderColor: colors.forest },
-  nudgeBtnText: { fontFamily: fonts.mono, fontSize: 9, color: colors.inkSoft },
-  nudgeBtnTextOn: { color: colors.white },
+  unlinkBtnText: { fontFamily: fonts.mono, fontSize: 9, color: colors.inkSoft },
+
+  divider: { height: 1, backgroundColor: colors.line, borderStyle: 'dashed', marginVertical: 16 },
 
   manageLinkBtn: {
     borderWidth: 1,
@@ -107,7 +78,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderRadius: 8,
     paddingVertical: 8,
-    marginTop: 6,
+    marginTop: 14,
     alignItems: 'center',
   },
   manageLinkText: { fontFamily: fonts.mono, fontSize: 10, color: colors.inkSoft },

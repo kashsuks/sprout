@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Pressable, Image } from 'react-native';
 import { colors } from '@/theme/colors';
 import { fonts, textStyles } from '@/theme/typography';
 import { Screen } from '@/components/Screen';
-import { PhotoTile } from '@/components/PhotoTile';
 import { FlameIcon } from '@/components/FlameIcon';
-import { useAppStore } from '@/store/useAppStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useScrapbook } from '@/api/hooks/users';
 
 export default function WrappedScreen({ navigation }: any) {
-  const points = useAppStore((s) => s.points);
+  const mongoUser = useAuthStore((s) => s.mongoUser);
+  const { data: scrapbookData } = useScrapbook();
   const [reflection, setReflection] = useState('');
+
+  const recentEntries = (scrapbookData?.entries ?? []).slice(0, 3);
 
   return (
     <View style={styles.overlay}>
@@ -17,40 +20,36 @@ export default function WrappedScreen({ navigation }: any) {
         <Text style={styles.closeText}>✕ close</Text>
       </Pressable>
       <Screen scroll contentStyle={{ paddingTop: 14 }}>
-        <Text style={styles.sub}>monthly recap</Text>
-        <Text style={styles.title}>your june</Text>
+        <Text style={styles.sub}>your recap</Text>
+        <Text style={styles.title}>so far</Text>
 
         <View style={styles.grid}>
           <View style={styles.statBox}>
-            <Text style={styles.statN}>22</Text>
-            <Text style={styles.statL}>tasks done</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statN}>{points}</Text>
+            <Text style={styles.statN}>{mongoUser?.points ?? 0}</Text>
             <Text style={styles.statL}>points</Text>
           </View>
           <View style={styles.statBox}>
             <View style={styles.flameStatRow}>
               <FlameIcon size={16} color={colors.page} />
-              <Text style={styles.statN}> 14</Text>
+              <Text style={styles.statN}> {mongoUser?.currentStreak ?? 0}</Text>
             </View>
-            <Text style={styles.statL}>best streak</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statN}>3</Text>
-            <Text style={styles.statL}>squad wins</Text>
+            <Text style={styles.statL}>current streak</Text>
           </View>
         </View>
 
-        <Text style={styles.stripLabel}>one year ago today</Text>
-        <View style={styles.strip}>
-          <PhotoTile type="run" style={styles.stripFrame} />
-          <PhotoTile type="gym" style={styles.stripFrame} />
-          <PhotoTile type="read" style={styles.stripFrame} />
-        </View>
+        <Text style={styles.stripLabel}>recent stamps</Text>
+        {recentEntries.length === 0 ? (
+          <Text style={styles.emptyHint}>nothing stamped yet</Text>
+        ) : (
+          <View style={styles.strip}>
+            {recentEntries.map((entry) => (
+              <Image key={entry._id} source={{ uri: entry.photoUrl }} style={styles.stripFrame} resizeMode="cover" />
+            ))}
+          </View>
+        )}
 
         <View style={styles.reflect}>
-          <Text style={styles.reflectPrompt}>what felt good this month?</Text>
+          <Text style={styles.reflectPrompt}>what felt good lately?</Text>
           <TextInput
             style={styles.reflectInput}
             placeholder="type here or skip"
@@ -88,7 +87,8 @@ const styles = StyleSheet.create({
 
   stripLabel: { fontFamily: fonts.mono, fontSize: 9, color: colors.page, opacity: 0.65, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 },
   strip: { flexDirection: 'row', gap: 5, marginBottom: 14 },
-  stripFrame: { width: 48, height: 48, borderRadius: 4 },
+  stripFrame: { width: 48, height: 48, borderRadius: 4, backgroundColor: 'rgba(246,242,231,0.15)' },
+  emptyHint: { fontFamily: fonts.mono, fontSize: 9.5, color: colors.page, opacity: 0.65, marginBottom: 14 },
 
   reflect: { borderTopWidth: 1, borderTopColor: 'rgba(246,242,231,0.25)', paddingTop: 10 },
   reflectPrompt: { ...textStyles.caption, color: colors.page, marginBottom: 6 },

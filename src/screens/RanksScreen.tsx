@@ -1,46 +1,42 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '@/theme/colors';
+import React from 'react';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { avatarColorFor, colors } from '@/theme/colors';
 import { fonts, textStyles } from '@/theme/typography';
 import { Screen } from '@/components/Screen';
-import { Pill } from '@/components/Pill';
-import { useAppStore, colorToken } from '@/store/useAppStore';
+import { useLeaderboard } from '@/api/hooks/leaderboard';
 
 export default function RanksScreen() {
-  const [scope, setScope] = useState<'friends' | 'squad'>('friends');
-  const leaderboardFriends = useAppStore((s) => s.leaderboardFriends);
-  const leaderboardSquad = useAppStore((s) => s.leaderboardSquad);
-
-  const list = scope === 'friends' ? leaderboardFriends : leaderboardSquad;
-  const sorted = [...list].sort((a, b) => b.pts - a.pts);
+  const { data, isLoading } = useLeaderboard();
+  const rows = data?.leaderboard ?? [];
 
   return (
     <Screen contentStyle={{ paddingTop: 4 }}>
       <Text style={[textStyles.appLogo, { color: colors.ink, marginBottom: 12 }]}>ranks</Text>
 
-      <View style={styles.chipRow}>
-        <Pill label="friends" active={scope === 'friends'} activeBg={colors.stamp} onPress={() => setScope('friends')} />
-        <Pill label="squad" active={scope === 'squad'} activeBg={colors.stamp} onPress={() => setScope('squad')} />
-      </View>
-
-      {sorted.map((row, i) => (
-        <View key={row.name} style={[styles.row, row.isYou && styles.rowMe]}>
-          <View style={[styles.rankBadge, i < 3 ? styles.rankGold : styles.rankPlain]}>
-            <Text style={[styles.rankText, i < 3 && { color: colors.brass }]}>{i + 1}</Text>
+      {isLoading ? (
+        <ActivityIndicator color={colors.stamp} style={{ marginTop: 24 }} />
+      ) : rows.length === 0 ? (
+        <Text style={styles.emptyHint}>no ranked friends yet — add friends to see the leaderboard</Text>
+      ) : (
+        rows.map((row) => (
+          <View key={row._id} style={[styles.row, row.me && styles.rowMe]}>
+            <View style={[styles.rankBadge, row.rank <= 3 ? styles.rankGold : styles.rankPlain]}>
+              <Text style={[styles.rankText, row.rank <= 3 && { color: colors.brass }]}>{row.rank}</Text>
+            </View>
+            <View style={[styles.avatar, { backgroundColor: avatarColorFor(row.username) }]}>
+              <Text style={styles.avatarText}>{row.displayName[0]?.toUpperCase()}</Text>
+            </View>
+            <Text style={styles.name}>{row.me ? 'you' : row.displayName}</Text>
+            <Text style={styles.points}>{row.points}</Text>
           </View>
-          <View style={[styles.avatar, { backgroundColor: colorToken(row.color) }]}>
-            <Text style={styles.avatarText}>{row.name[0].toUpperCase()}</Text>
-          </View>
-          <Text style={styles.name}>{row.isYou ? 'you' : row.name}</Text>
-          <Text style={styles.points}>{row.pts}</Text>
-        </View>
-      ))}
+        ))
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  chipRow: { flexDirection: 'row', gap: 6, marginBottom: 12 },
+  emptyHint: { fontFamily: fonts.mono, fontSize: 10, color: colors.inkSoft, textAlign: 'center', paddingVertical: 24 },
 
   row: {
     flexDirection: 'row',
