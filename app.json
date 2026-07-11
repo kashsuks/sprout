@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "still",
+    "slug": "still",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#2e2015",
+    "splash": {
+      "backgroundColor": "#2e2015"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.still.app",
+      "infoPlist": {
+        "NSContactsUsageDescription": "still uses your contacts to help you find friends who are already using the app.",
+        "NSCameraUsageDescription": "still uses your camera to let you stamp your completed tasks with a photo.",
+        "NSPhotoLibraryUsageDescription": "still lets you attach a photo from your library when you stamp a task."
+      }
+    },
+    "android": {
+      "package": "com.still.app",
+      "permissions": ["READ_CONTACTS", "CAMERA"]
+    }
+  }
+}
