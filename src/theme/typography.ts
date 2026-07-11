@@ -5,20 +5,17 @@ import {
   Fraunces_500Medium_Italic,
   Fraunces_600SemiBold_Italic,
 } from '@expo-google-fonts/fraunces';
-import { Caveat_500Medium, Caveat_600SemiBold } from '@expo-google-fonts/caveat';
-import { SpecialElite_400Regular } from '@expo-google-fonts/special-elite';
+import { MarckScript_400Regular } from '@expo-google-fonts/marck-script';
 import { IBMPlexMono_500Medium, IBMPlexMono_600SemiBold } from '@expo-google-fonts/ibm-plex-mono';
 
-// Font family names used throughout the app. Matches the four-typeface
-// system from the mockup: Fraunces (display/italic), Caveat (handwritten
-// captions), Special Elite (typewriter labels/stamps), IBM Plex Mono (body/UI).
+// Font family names used throughout the app. Matches the three-typeface
+// system from the mockup: Fraunces (display/italic), Marck Script
+// (handwritten captions), IBM Plex Mono (body/UI/labels).
 export const fonts = {
   displayItalic: 'Fraunces_600SemiBold_Italic',
   display: 'Fraunces_600SemiBold',
   displayMedium: 'Fraunces_500Medium',
-  handwriting: 'Caveat_600SemiBold',
-  handwritingRegular: 'Caveat_500Medium',
-  typewriter: 'SpecialElite_400Regular',
+  handwriting: 'MarckScript_400Regular',
   mono: 'IBMPlexMono_500Medium',
   monoBold: 'IBMPlexMono_600SemiBold',
 } as const;
@@ -29,9 +26,7 @@ export function useAppFonts() {
     Fraunces_600SemiBold,
     Fraunces_500Medium_Italic,
     Fraunces_600SemiBold_Italic,
-    Caveat_500Medium,
-    Caveat_600SemiBold,
-    SpecialElite_400Regular,
+    MarckScript_400Regular,
     IBMPlexMono_500Medium,
     IBMPlexMono_600SemiBold,
   });
@@ -42,13 +37,13 @@ export const textStyles = {
   appLogo: { fontFamily: fonts.displayItalic, fontSize: 18 },
   screenTitle: { fontFamily: fonts.displayItalic, fontSize: 24 },
   eyebrow: {
-    fontFamily: fonts.typewriter,
-    fontSize: 11,
-    letterSpacing: 1.2,
+    fontFamily: fonts.mono,
+    fontSize: 9.5,
+    letterSpacing: 1,
     textTransform: 'uppercase' as const,
   },
-  caption: { fontFamily: fonts.handwritingRegular, fontSize: 16 },
+  caption: { fontFamily: fonts.handwriting, fontSize: 17 },
   body: { fontFamily: fonts.mono, fontSize: 11 },
   bodyBold: { fontFamily: fonts.monoBold, fontSize: 11 },
-  small: { fontFamily: fonts.mono, fontSize: 9.5, color: '#6b5d47' },
+  small: { fontFamily: fonts.mono, fontSize: 9.5, color: '#6d7a63' },
 };

@@ -1,33 +1,24 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, Alert, LayoutChangeEvent, useWindowDimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TextInput, Pressable, Image, Alert, Switch } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '@/theme/colors';
 import { fonts, textStyles } from '@/theme/typography';
 import { Screen } from '@/components/Screen';
-import { DashedRect } from '@/components/DashedBorder';
-import { currentUser } from '@/data/mockData';
-
-const STICKERS = ['🔥', '❤️', '⭐', '🏆'];
+import { useAppStore } from '@/store/useAppStore';
 
 export default function CompleteStampScreen({ route, navigation }: any) {
-  const task = route?.params?.task ?? { title: 'stretch 10 min' };
-  const { height: windowHeight } = useWindowDimensions();
+  const taskId = route?.params?.taskId as string | undefined;
+  const task = useAppStore((s) => s.tasks.find((t) => t.id === taskId));
+  const completeTask = useAppStore((s) => s.completeTask);
+
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
-  const [selectedSticker, setSelectedSticker] = useState<string | null>(null);
-  const [viewfinderSize, setViewfinderSize] = useState({ width: 0, height: 0 });
-  const [btnSize, setBtnSize] = useState({ width: 0, height: 0 });
+  const [share, setShare] = useState(!!task?.friend);
+  const [celebration, setCelebration] = useState<{ emoji: string; msg: string; streak: number } | null>(null);
 
-  const onViewfinderLayout = useCallback((e: LayoutChangeEvent) => {
-    setViewfinderSize(e.nativeEvent.layout);
-  }, []);
-  const onBtnLayout = useCallback((e: LayoutChangeEvent) => {
-    setBtnSize(e.nativeEvent.layout);
-  }, []);
+  if (!task) return null;
 
-  // Cap the photo viewfinder's height on shorter phones so the caption
-  // input and STAMP IT button are never pushed below the fold.
-  const viewfinderMaxHeight = Math.min(windowHeight * 0.34, 320);
+  const requiresPhoto = !!task.friend;
 
   async function pickPhoto() {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
@@ -40,147 +31,138 @@ export default function CompleteStampScreen({ route, navigation }: any) {
   }
 
   function stampIt() {
-    // TODO: upload photoUri to DO Spaces via presigned URL, then POST /entries
-    navigation?.navigate('Feed');
+    if (requiresPhoto && !photoUri) return;
+    const pick = completeTask(task!.id, { photo: photoUri, caption, share: requiresPhoto ? true : share });
+    setCelebration({ ...pick, streak: task!.streak + 1 });
+    setTimeout(() => {
+      navigation?.goBack();
+    }, 1500);
+  }
+
+  if (celebration) {
+    return (
+      <Screen scroll={false}>
+        <View style={styles.celebrate}>
+          <Text style={styles.celebrateEmoji}>{celebration.emoji}</Text>
+          <Text style={styles.celebrateMsg}>{celebration.msg}</Text>
+          <Text style={styles.celebrateStreak}>{celebration.streak} day streak</Text>
+        </View>
+      </Screen>
+    );
   }
 
   return (
     <Screen contentStyle={{ paddingTop: 4 }}>
-      <Text style={[textStyles.appLogo, { color: colors.ink, fontSize: 15, marginBottom: 8 }]}>
-        {task.title}
+      <Pressable onPress={() => navigation?.goBack()}>
+        <Text style={styles.back}>← back</Text>
+      </Pressable>
+      <Text style={[textStyles.appLogo, { color: colors.ink, fontSize: 15, marginVertical: 8 }]}>{task.name}</Text>
+      <Text style={styles.subtitle}>
+        {requiresPhoto ? `linked with ${task.friend} · a photo is required for this one to count` : 'proof is optional here — totally up to you'}
       </Text>
 
-      <View style={styles.strip}>
-        <Text style={styles.stripText}>day {currentUser.streak} streak</Text>
-        <Text style={styles.stripPoints}>+15 pts</Text>
-      </View>
-
-      <Pressable
-        style={[styles.viewfinder, { maxHeight: viewfinderMaxHeight }]}
-        onPress={pickPhoto}
-        onLayout={onViewfinderLayout}
-      >
-        {viewfinderSize.width > 0 && (
-          <DashedRect
-            width={viewfinderSize.width}
-            height={viewfinderSize.height}
-            radius={6}
-            color={colors.inkSoft}
-            strokeWidth={1.5}
-            dash={[5, 4]}
-          />
+      <Pressable style={styles.viewfinder} onPress={pickPhoto}>
+        {photoUri ? (
+          <Image source={{ uri: photoUri }} style={StyleSheet.absoluteFillObject as any} resizeMode="cover" />
+        ) : (
+          <>
+            <Text style={{ fontSize: 38 }}>📷</Text>
+            <Text style={styles.viewfinderHint}>tap to open camera</Text>
+          </>
         )}
-        {photoUri ? <View style={styles.photoPreview} /> : <Text style={{ fontSize: 26 }}>📷</Text>}
       </Pressable>
-
-      <View style={styles.stickerTray}>
-        {STICKERS.map((s) => (
-          <Pressable
-            key={s}
-            hitSlop={4}
-            style={({ pressed }) => [
-              styles.sticker,
-              selectedSticker === s && styles.stickerOn,
-              pressed && styles.stickerPressed,
-            ]}
-            onPress={() => setSelectedSticker(s)}
-          >
-            <Text style={{ fontSize: 12 }}>{s}</Text>
-          </Pressable>
-        ))}
-        <Pressable style={({ pressed }) => [styles.sticker, pressed && styles.stickerPressed]}>
-          <Text style={{ fontSize: 12, color: colors.inkSoft }}>+</Text>
-        </Pressable>
-      </View>
 
       <TextInput
         style={styles.captionInput}
-        placeholder="say something about it..."
+        placeholder="say something about it... (optional)"
         placeholderTextColor={colors.inkSoft}
         value={caption}
         onChangeText={setCaption}
         returnKeyType="done"
-        blurOnSubmit
       />
 
+      <View style={styles.shareRow}>
+        <Text style={styles.shareLabel}>share to feed</Text>
+        <Switch
+          value={requiresPhoto ? true : share}
+          onValueChange={setShare}
+          disabled={requiresPhoto}
+          trackColor={{ false: colors.line, true: colors.forest }}
+          thumbColor={colors.white}
+        />
+      </View>
+
       <Pressable
-        style={({ pressed }) => [styles.stampBtn, pressed && styles.stampBtnPressed]}
+        style={[styles.stampBtn, requiresPhoto && !photoUri && styles.stampBtnDisabled]}
+        disabled={requiresPhoto && !photoUri}
         onPress={stampIt}
-        onLayout={onBtnLayout}
       >
-        {btnSize.width > 0 && (
-          <DashedRect width={btnSize.width} height={btnSize.height} radius={8} color={colors.stamp} strokeWidth={1.5} />
-        )}
-        <Text style={styles.stampBtnText}>STAMP IT</Text>
+        <Text style={styles.stampBtnText}>SPROUT IT</Text>
       </Pressable>
+      {!requiresPhoto && (
+        <Pressable onPress={stampIt}>
+          <Text style={styles.skipLink}>mark done without a photo</Text>
+        </Pressable>
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  strip: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 6,
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    marginBottom: 10,
-  },
-  stripText: { fontFamily: fonts.mono, fontSize: 10, color: colors.ink },
-  stripPoints: { fontFamily: fonts.monoBold, fontSize: 10, color: colors.forest },
+  back: { fontFamily: fonts.mono, fontSize: 11, color: colors.inkSoft },
+  subtitle: { fontFamily: fonts.mono, fontSize: 9.5, color: colors.inkSoft, marginBottom: 10 },
 
   viewfinder: {
-    position: 'relative',
     aspectRatio: 1,
     borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.inkSoft,
+    borderStyle: 'dashed',
     backgroundColor: colors.forestBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
     overflow: 'hidden',
   },
-  photoPreview: { ...StyleSheet.absoluteFillObject, borderRadius: 6, backgroundColor: colors.line },
-
-  stickerTray: { flexDirection: 'row', gap: 7, marginBottom: 9 },
-  sticker: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stickerOn: { borderColor: colors.stamp, backgroundColor: colors.stampBg },
-  stickerPressed: { opacity: 0.6 },
+  viewfinderHint: { fontFamily: fonts.mono, fontSize: 9, color: colors.inkSoft, marginTop: 6 },
 
   captionInput: {
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
-    fontFamily: fonts.handwritingRegular,
-    fontSize: 15,
+    ...textStyles.caption,
     color: colors.ink,
     paddingVertical: 7,
-    marginBottom: 12,
+    marginBottom: 9,
   },
 
+  shareRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.page,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginBottom: 12,
+  },
+  shareLabel: { fontFamily: fonts.mono, fontSize: 10, color: colors.ink },
+
   stampBtn: {
-    position: 'relative',
+    borderWidth: 1.5,
+    borderColor: colors.stamp,
+    borderStyle: 'dashed',
     borderRadius: 8,
     paddingVertical: 11,
     alignItems: 'center',
-    overflow: 'hidden',
   },
-  stampBtnPressed: { opacity: 0.75 },
-  stampBtnText: {
-    fontFamily: fonts.typewriter,
-    fontSize: 12,
-    color: colors.stamp,
-    letterSpacing: 1,
-  },
+  stampBtnDisabled: { opacity: 0.35 },
+  stampBtnText: { fontFamily: fonts.monoBold, fontSize: 12, color: colors.stamp, letterSpacing: 1 },
+  skipLink: { fontFamily: fonts.mono, fontSize: 10, color: colors.inkSoft, textAlign: 'center', marginTop: 9 },
+
+  celebrate: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  celebrateEmoji: { fontSize: 48 },
+  celebrateMsg: { ...textStyles.appLogo, fontSize: 18, color: colors.ink, marginTop: 13, marginBottom: 4, textAlign: 'center' },
+  celebrateStreak: { fontFamily: fonts.monoBold, fontSize: 11, color: colors.stamp },
 });

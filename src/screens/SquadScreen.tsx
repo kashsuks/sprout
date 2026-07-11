@@ -3,10 +3,12 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors } from '@/theme/colors';
 import { fonts, textStyles } from '@/theme/typography';
 import { Screen } from '@/components/Screen';
-import { squadGoal, nudges } from '@/data/mockData';
+import { useAppStore, colorToken } from '@/store/useAppStore';
 
-export default function SquadScreen() {
-  const pct = Math.min(100, Math.round((squadGoal.progress / squadGoal.target) * 100));
+export default function SquadScreen({ navigation }: any) {
+  const squad = useAppStore((s) => s.squad);
+  const actNudge = useAppStore((s) => s.actNudge);
+  const pct = Math.min(100, Math.round((squad.current / squad.target) * 100));
 
   return (
     <Screen contentStyle={{ paddingTop: 4 }}>
@@ -14,37 +16,47 @@ export default function SquadScreen() {
 
       <View style={styles.runway}>
         <View style={styles.runwayTop}>
-          <Text style={styles.runwayLabel}>{squadGoal.title}</Text>
-          <Text style={styles.runwayValue}>
-            {squadGoal.progress}/{squadGoal.target}
-          </Text>
+          <Text style={styles.runwayLabel}>{squad.label}</Text>
+          <Text style={styles.runwayValue}>{squad.current}/{squad.target}</Text>
         </View>
         <View style={styles.track}>
           <View style={[styles.trackFill, { width: `${pct}%` }]} />
         </View>
       </View>
 
-      <Text style={styles.sectionLabel}>NUDGES</Text>
-      {nudges.map((n) => (
-        <View key={n.id} style={styles.nudgeRow}>
-          <View style={[styles.avatar, { backgroundColor: colors.brass }]}>
-            <Text style={styles.avatarText}>{n.initial}</Text>
+      <Text style={styles.sectionLabel}>nudges</Text>
+      {squad.nudges.map((n, i) => (
+        <View key={i} style={styles.nudgeRow}>
+          <View style={[styles.avatar, { backgroundColor: colorToken(n.color) }]}>
+            <Text style={styles.avatarText}>{n.name[0].toUpperCase()}</Text>
           </View>
-          <Text style={styles.nudgeText}>
-            {n.type === 'action' ? `${n.name}: "${n.message}"` : n.message}
-          </Text>
-          {n.type === 'action' && (
-            <View style={styles.nudgeActions}>
-              <Pressable style={({ pressed }) => [styles.nudgeBtn, styles.nudgeBtnOn, pressed && styles.pressed]}>
-                <Text style={styles.nudgeBtnTextOn}>accept</Text>
-              </Pressable>
-              <Pressable style={({ pressed }) => [styles.nudgeBtn, pressed && styles.pressed]}>
-                <Text style={styles.nudgeBtnText}>later</Text>
-              </Pressable>
-            </View>
+          {n.status === 'pending' ? (
+            <>
+              <Text style={styles.nudgeText}>{n.name}: "{n.text}"</Text>
+              <View style={styles.nudgeActions}>
+                <Pressable
+                  style={[styles.nudgeBtn, n.acted === 'accept' && styles.nudgeBtnOn]}
+                  onPress={() => actNudge(i, 'accept')}
+                >
+                  <Text style={[styles.nudgeBtnText, n.acted === 'accept' && styles.nudgeBtnTextOn]}>accept</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.nudgeBtn, n.acted === 'later' && styles.nudgeBtnOn]}
+                  onPress={() => actNudge(i, 'later')}
+                >
+                  <Text style={[styles.nudgeBtnText, n.acted === 'later' && styles.nudgeBtnTextOn]}>later</Text>
+                </Pressable>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.nudgeText}>{n.name} {n.text}</Text>
           )}
         </View>
       ))}
+
+      <Pressable style={styles.manageLinkBtn} onPress={() => navigation?.navigate('LinkDuo')}>
+        <Text style={styles.manageLinkText}>manage duo links</Text>
+      </Pressable>
     </Screen>
   );
 }
@@ -56,7 +68,7 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderRadius: 8,
     padding: 11,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   runwayTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   runwayLabel: { fontFamily: fonts.monoBold, fontSize: 10, color: colors.ink },
@@ -74,10 +86,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
   },
-  avatar: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontFamily: fonts.display, fontSize: 12, color: colors.white },
+  avatar: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontFamily: fonts.display, fontSize: 11, color: colors.white },
   nudgeText: { flex: 1, fontFamily: fonts.mono, fontSize: 10, color: colors.ink },
-  nudgeActions: { flexDirection: 'row', gap: 5 },
+  nudgeActions: { flexDirection: 'row', gap: 5, marginLeft: 'auto' },
   nudgeBtn: {
     paddingVertical: 4,
     paddingHorizontal: 8,
@@ -86,7 +98,17 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   nudgeBtnOn: { backgroundColor: colors.forest, borderColor: colors.forest },
-  nudgeBtnText: { fontFamily: fonts.typewriter, fontSize: 9, color: colors.inkSoft },
-  nudgeBtnTextOn: { fontFamily: fonts.typewriter, fontSize: 9, color: colors.white },
-  pressed: { opacity: 0.6 },
+  nudgeBtnText: { fontFamily: fonts.mono, fontSize: 9, color: colors.inkSoft },
+  nudgeBtnTextOn: { color: colors.white },
+
+  manageLinkBtn: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    paddingVertical: 8,
+    marginTop: 6,
+    alignItems: 'center',
+  },
+  manageLinkText: { fontFamily: fonts.mono, fontSize: 10, color: colors.inkSoft },
 });

@@ -7,24 +7,29 @@ import { colors } from '@/theme/colors';
 import { FeedIcon, LeaderboardIcon, NewEntryIcon, SquadIcon, ProfileIcon } from '@/components/TabIcons';
 
 import FeedScreen from '@/screens/FeedScreen';
-import LeaderboardScreen from '@/screens/LeaderboardScreen';
-import NewEntryScreen from '@/screens/NewEntryScreen';
+import RanksScreen from '@/screens/RanksScreen';
+import TasksScreen from '@/screens/TasksScreen';
+import TagPickerScreen from '@/screens/TagPickerScreen';
 import CompleteStampScreen from '@/screens/CompleteStampScreen';
 import SquadScreen from '@/screens/SquadScreen';
 import LinkDuoScreen from '@/screens/LinkDuoScreen';
 import ProfileScreen from '@/screens/ProfileScreen';
+import WrappedScreen from '@/screens/WrappedScreen';
 
 const Tab = createBottomTabNavigator();
-const EntryStack = createNativeStackNavigator();
+const TasksStack = createNativeStackNavigator();
 const SquadStack = createNativeStackNavigator();
+const ProfileStack = createNativeStackNavigator();
 
-// New Entry tab actually contains a two-step flow: pick a task, then stamp it.
-function EntryStackNavigator() {
+// Tasks tab hosts a three-step flow: the task list, tagging a friend while
+// composing a new task, and stamping a task complete.
+function TasksStackNavigator() {
   return (
-    <EntryStack.Navigator screenOptions={{ headerShown: false }}>
-      <EntryStack.Screen name="NewEntry" component={NewEntryScreen} />
-      <EntryStack.Screen name="CompleteStamp" component={CompleteStampScreen} />
-    </EntryStack.Navigator>
+    <TasksStack.Navigator screenOptions={{ headerShown: false }}>
+      <TasksStack.Screen name="TasksList" component={TasksScreen} />
+      <TasksStack.Screen name="TagPicker" component={TagPickerScreen} />
+      <TasksStack.Screen name="CompleteStamp" component={CompleteStampScreen} />
+    </TasksStack.Navigator>
   );
 }
 
@@ -35,6 +40,16 @@ function SquadStackNavigator() {
       <SquadStack.Screen name="Squad" component={SquadScreen} />
       <SquadStack.Screen name="LinkDuo" component={LinkDuoScreen} />
     </SquadStack.Navigator>
+  );
+}
+
+// Profile tab also hosts the "wrapped" monthly recap overlay.
+function ProfileStackNavigator() {
+  return (
+    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
+      <ProfileStack.Screen name="Wrapped" component={WrappedScreen} options={{ presentation: 'transparentModal', animation: 'fade' }} />
+    </ProfileStack.Navigator>
   );
 }
 
@@ -63,13 +78,13 @@ export default function RootNavigator() {
           options={{ tabBarIcon: ({ focused }) => <FeedIcon active={focused} /> }}
         />
         <Tab.Screen
-          name="Leaderboard"
-          component={LeaderboardScreen}
+          name="Ranks"
+          component={RanksScreen}
           options={{ tabBarIcon: ({ focused }) => <LeaderboardIcon active={focused} /> }}
         />
         <Tab.Screen
-          name="Entry"
-          component={EntryStackNavigator}
+          name="Tasks"
+          component={TasksStackNavigator}
           options={{ tabBarIcon: ({ focused }) => <NewEntryIcon active={focused} /> }}
         />
         <Tab.Screen
@@ -79,7 +94,7 @@ export default function RootNavigator() {
         />
         <Tab.Screen
           name="Profile"
-          component={ProfileScreen}
+          component={ProfileStackNavigator}
           options={{ tabBarIcon: ({ focused }) => <ProfileIcon active={focused} /> }}
         />
       </Tab.Navigator>
