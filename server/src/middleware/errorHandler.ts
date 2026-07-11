@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import mongoose from "mongoose";
 import { ZodError } from "zod";
 
 export class HttpError extends Error {
@@ -16,6 +17,12 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
   }
   if (err instanceof HttpError) {
     return res.status(err.status).json({ error: err.message });
+  }
+  // A malformed :id route param (not a valid ObjectId) reaches Mongoose as a
+  // CastError, not a validation error we wrote ourselves — treat it the
+  // same as bad input (400) rather than letting it fall through to 500.
+  if (err instanceof mongoose.Error.CastError) {
+    return res.status(400).json({ error: `Invalid ${err.path}: ${err.value}` });
   }
   console.error(err);
   return res.status(500).json({ error: "Internal server error" });

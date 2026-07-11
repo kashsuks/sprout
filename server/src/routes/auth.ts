@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { User } from "../models/User";
 import { asyncHandler } from "../middleware/errorHandler";
+import { authLimiter } from "../middleware/rateLimiter";
 import { hashContactValue, normalizeEmail } from "../utils/hash";
 
 export const authRouter = Router();
@@ -24,6 +25,7 @@ const bootstrapSchema = z.object({
 // fields. Called once by the client right after first successful sign-in.
 authRouter.post(
   "/bootstrap",
+  authLimiter,
   asyncHandler(async (req, res) => {
     if (!req.firebaseUid || !req.firebaseEmail) {
       return res.status(401).json({ error: "Missing verified Firebase identity" });

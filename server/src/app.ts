@@ -1,8 +1,9 @@
 import cors from "cors";
 import express, { type Express } from "express";
-import { corsAllowedOrigins } from "./config/env";
+import { corsAllowedOrigins, env } from "./config/env";
 import { attachMongoUser } from "./middleware/attachMongoUser";
 import { errorHandler } from "./middleware/errorHandler";
+import { apiLimiter } from "./middleware/rateLimiter";
 import { verifyFirebaseToken } from "./middleware/verifyFirebaseToken";
 import { authRouter } from "./routes/auth";
 import { duoRouter } from "./routes/duo";
@@ -26,6 +27,14 @@ export function createApp(): Express {
   );
 
   app.get("/health", (_req, res) => res.status(200).json({ ok: true }));
+
+  // Rate limiting is skipped in tests: the in-memory limiter is a
+  // module-level singleton shared across every createApp() call in a test
+  // run, so it would accumulate counts across unrelated test files and
+  // produce flaky 429s that have nothing to do with the behavior under test.
+  if (env.NODE_ENV !== "test") {
+    app.use("/api/v1", apiLimiter);
+  }
 
   // Every /api/v1 route requires a verified Firebase identity; attachMongoUser
   // then loads (but does not create) the corresponding Mongo profile.
