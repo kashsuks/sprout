@@ -19,6 +19,7 @@ const entrySchema = new Schema(
     // comparisons for streaks/duo without re-deriving tz math on every read.
     localDate: { type: String, required: true },
     duoId: { type: Schema.Types.ObjectId, ref: "Duo", default: null },
+    likedBy: { type: [{ type: Schema.Types.ObjectId, ref: "User" }], default: [] },
   },
   { timestamps: true }
 );

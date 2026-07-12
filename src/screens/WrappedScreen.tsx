@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, Image, Share } from 'react-native';
-import { colors } from '@/theme/colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { avatarColorFor, colors } from '@/theme/colors';
 import { fonts, textStyles } from '@/theme/typography';
 import { Screen } from '@/components/Screen';
 import { FlameIcon } from '@/components/FlameIcon';
@@ -49,6 +50,7 @@ function useMonthRecap() {
 }
 
 export default function WrappedScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const mongoUser = useAuthStore((s) => s.mongoUser);
   const recap = useMonthRecap();
   const { topTask } = recap;
@@ -69,10 +71,23 @@ export default function WrappedScreen({ navigation }: any) {
 
   return (
     <View style={styles.overlay}>
-      <Pressable style={styles.close} onPress={() => navigation?.goBack()}>
+      <Pressable style={[styles.close, { top: insets.top + 12 }]} onPress={() => navigation?.goBack()}>
         <Text style={styles.closeText}>✕ close</Text>
       </Pressable>
-      <Screen scroll contentStyle={{ paddingTop: 14 }}>
+      <Screen scroll contentStyle={{ paddingTop: 14 }} backgroundColor={colors.navy}>
+        <View style={styles.idCard}>
+          <View style={[styles.idPhoto, { backgroundColor: avatarColorFor(mongoUser?.username ?? '') }]}>
+            <Text style={styles.idInitial}>{mongoUser?.displayName[0]?.toUpperCase() ?? '?'}</Text>
+          </View>
+          <View>
+            <Text style={styles.idName}>{mongoUser?.displayName ?? ''}</Text>
+            <View style={styles.idMetaRow}>
+              <FlameIcon size={11} color={colors.page} />
+              <Text style={styles.idMeta}> day {mongoUser?.currentStreak ?? 0} streak · {mongoUser?.points ?? 0} pts</Text>
+            </View>
+          </View>
+        </View>
+
         <Text style={styles.sub}>your recap</Text>
         <Text style={styles.title}>your {recap.month}</Text>
 
@@ -169,8 +184,15 @@ export default function WrappedScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: colors.navy },
-  close: { position: 'absolute', top: 10, right: 12, zIndex: 5 },
+  close: { position: 'absolute', right: 12, zIndex: 5 },
   closeText: { fontFamily: fonts.mono, fontSize: 12, color: colors.page },
+
+  idCard: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 18 },
+  idPhoto: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  idInitial: { fontFamily: fonts.display, fontSize: 17, color: colors.white },
+  idName: { fontFamily: fonts.display, fontSize: 15, color: colors.page },
+  idMetaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  idMeta: { fontFamily: fonts.mono, fontSize: 9.5, color: colors.page, opacity: 0.75 },
 
   sub: { fontFamily: fonts.mono, fontSize: 9, color: colors.page, opacity: 0.65, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 },
   title: { fontFamily: fonts.displayItalic, fontSize: 22, color: colors.page, marginBottom: 14 },
