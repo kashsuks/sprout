@@ -11,6 +11,8 @@ type ScreenProps = {
   /** Pass both to enable pull-to-refresh. */
   refreshing?: boolean;
   onRefresh?: () => void;
+  /** Overrides the default page background — e.g. for dark overlay screens like Wrapped. */
+  backgroundColor?: string;
 };
 
 /**
@@ -23,7 +25,7 @@ type ScreenProps = {
  *  3. KeyboardAvoidingView so text inputs (caption, custom task) aren't
  *     covered by the keyboard on smaller phones.
  */
-export function Screen({ children, scroll = true, contentStyle, refreshing, onRefresh }: ScreenProps) {
+export function Screen({ children, scroll = true, contentStyle, refreshing, onRefresh, backgroundColor }: ScreenProps) {
   const insets = useSafeAreaInsets();
 
   const body = scroll ? (
@@ -45,7 +47,7 @@ export function Screen({ children, scroll = true, contentStyle, refreshing, onRe
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, backgroundColor ? { backgroundColor } : null]} edges={['top']}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
