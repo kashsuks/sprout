@@ -1,6 +1,6 @@
-# still — mobile app scaffold
+# sprout — mobile app scaffold
 
-Design-faithful Expo/React Native scaffold for the "still" app. Fonts, colors,
+Design-faithful Expo/React Native scaffold for the "sprout" app. Fonts, colors,
 and the dashed-border/stamp primitives are wired up to match the mockup
 exactly; screens are built with mock data so the UI can be reviewed before
 the backend is connected.
