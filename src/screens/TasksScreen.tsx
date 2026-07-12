@@ -5,18 +5,27 @@ import { fonts, textStyles } from '@/theme/typography';
 import { Screen } from '@/components/Screen';
 import { Pill } from '@/components/Pill';
 import { useCreateGoal, useGoalsToday } from '@/api/hooks/goals';
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 
 export default function TasksScreen({ navigation }: any) {
   const [addOpen, setAddOpen] = useState(false);
   const [composeText, setComposeText] = useState('');
   const [archiveOpen, setArchiveOpen] = useState(false);
 
-  const { data, isLoading, error } = useGoalsToday();
+  const { data, isLoading, error, refetch } = useGoalsToday();
   const createGoal = useCreateGoal();
 
   const goals = data?.goals ?? [];
   const activeGoals = goals.filter((g) => !g.completed);
   const doneGoals = goals.filter((g) => g.completed);
+
+  useRefetchOnFocus(refetch);
+  const [refreshing, setRefreshing] = useState(false);
+  async function onRefresh() {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }
 
   function submitTask() {
     const title = composeText.trim();
@@ -29,7 +38,7 @@ export default function TasksScreen({ navigation }: any) {
   }
 
   return (
-    <Screen contentStyle={{ paddingTop: 4 }}>
+    <Screen contentStyle={{ paddingTop: 4 }} refreshing={refreshing} onRefresh={onRefresh}>
       <View style={styles.header}>
         <Text style={[textStyles.appLogo, { color: colors.ink }]}>tasks</Text>
         <Text style={styles.doneCount}>{doneGoals.length} of {goals.length} done</Text>

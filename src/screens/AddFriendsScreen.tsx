@@ -14,6 +14,9 @@ import {
 } from '@/api/hooks/friends';
 import { useUserProfile } from '@/api/hooks/users';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
+
+const POLL_INTERVAL_MS = 15000;
 
 const STATUS_LABEL: Record<string, string> = {
   none: 'add',
@@ -67,17 +70,31 @@ function OutgoingRequestRow({ request, myId }: { request: FriendRequest; myId: s
 export default function AddFriendsScreen() {
   const mongoUser = useAuthStore((s) => s.mongoUser);
   const [query, setQuery] = useState('');
-  const { data: searchData, isFetching: searching } = useFriendSearch(query);
-  const { data: incomingData } = useIncomingRequests();
-  const { data: outgoingData } = useOutgoingRequests();
+  const { data: searchData, isFetching: searching, refetch: refetchSearch } = useFriendSearch(query);
+  // Polls so an incoming request shows up (with accept/decline) without
+  // having to leave and reopen this screen.
+  const { data: incomingData, refetch: refetchIncoming } = useIncomingRequests({ refetchInterval: POLL_INTERVAL_MS });
+  const { data: outgoingData, refetch: refetchOutgoing } = useOutgoingRequests();
   const sendRequest = useSendFriendRequest();
+
+  useRefetchOnFocus(refetchIncoming);
+  useRefetchOnFocus(refetchOutgoing);
+
+  const [refreshing, setRefreshing] = useState(false);
+  async function onRefresh() {
+    setRefreshing(true);
+    const refetches: Promise<unknown>[] = [refetchIncoming(), refetchOutgoing()];
+    if (query.trim().length > 0) refetches.push(refetchSearch());
+    await Promise.all(refetches);
+    setRefreshing(false);
+  }
 
   const results = searchData?.users ?? [];
   const incoming = incomingData?.requests ?? [];
   const outgoing = outgoingData?.requests ?? [];
 
   return (
-    <Screen contentStyle={{ paddingTop: 4 }}>
+    <Screen contentStyle={{ paddingTop: 4 }} refreshing={refreshing} onRefresh={onRefresh}>
       <Text style={[textStyles.appLogo, { color: colors.ink, marginBottom: 12 }]}>add friends</Text>
 
       <TextInput

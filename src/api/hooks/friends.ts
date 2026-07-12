@@ -38,10 +38,11 @@ export function useSendFriendRequest() {
 
 export type FriendRequest = { _id: string; userA: string; userB: string; requestedBy: string; status: string };
 
-export function useIncomingRequests() {
+export function useIncomingRequests(options?: { refetchInterval?: number | false }) {
   return useQuery({
     queryKey: ['friends', 'requests', 'incoming'],
     queryFn: () => apiFetch<{ requests: FriendRequest[] }>('/friends/requests/incoming'),
+    refetchInterval: options?.refetchInterval,
   });
 }
 

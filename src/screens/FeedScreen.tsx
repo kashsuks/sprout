@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, Pressable, ActivityIndicator } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { avatarColorFor, colors } from '@/theme/colors';
 import { fonts, textStyles } from '@/theme/typography';
 import { Screen } from '@/components/Screen';
@@ -8,6 +9,9 @@ import { DashedCard } from '@/components/DashedCard';
 import { FlameIcon } from '@/components/FlameIcon';
 import { useFeed, useFeedDuo } from '@/api/hooks/feed';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
+
+const POLL_INTERVAL_MS = 20000;
 
 function abbrev(name: string) {
   return name.replace(/[^a-zA-Z ]/g, '').split(' ')[0].slice(0, 3).toUpperCase();
@@ -15,14 +19,43 @@ function abbrev(name: string) {
 
 export default function FeedScreen({ navigation }: any) {
   const mongoUser = useAuthStore((s) => s.mongoUser);
-  const { data: feedData, isLoading: feedLoading } = useFeed();
-  const { data: duoData } = useFeedDuo();
+  const isFocused = useIsFocused();
+  const { data: feedData, isLoading: feedLoading, refetch: refetchFeed } = useFeed({
+    refetchInterval: isFocused ? POLL_INTERVAL_MS : false,
+  });
+  const { data: duoData, refetch: refetchDuo } = useFeedDuo();
 
-  const entries = feedData?.entries ?? [];
+  const allEntries = feedData?.entries ?? [];
   const duo = duoData?.duo;
 
+  // Newly-polled entries don't appear in the list immediately — they're held
+  // back behind a "new posts" banner (like Google Classroom) until the user
+  // taps it or pulls to refresh, so the feed doesn't shift under them.
+  const [shownIds, setShownIds] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (shownIds === null && feedData) setShownIds(allEntries.map((e) => e._id));
+  }, [feedData]);
+
+  const entries = shownIds ? allEntries.filter((e) => shownIds.includes(e._id)) : allEntries;
+  const newCount = shownIds ? allEntries.filter((e) => !shownIds.includes(e._id)).length : 0;
+
+  function revealNewEntries() {
+    setShownIds(allEntries.map((e) => e._id));
+  }
+
+  useRefetchOnFocus(refetchFeed);
+  useRefetchOnFocus(refetchDuo);
+
+  const [refreshing, setRefreshing] = useState(false);
+  async function onRefresh() {
+    setRefreshing(true);
+    const [feedResult] = await Promise.all([refetchFeed(), refetchDuo()]);
+    if (feedResult.data) setShownIds(feedResult.data.entries.map((e) => e._id));
+    setRefreshing(false);
+  }
+
   return (
-    <Screen contentStyle={{ paddingTop: 4 }}>
+    <Screen contentStyle={{ paddingTop: 4 }} refreshing={refreshing} onRefresh={onRefresh}>
       <View style={styles.header}>
         <Text style={[textStyles.appLogo, { color: colors.ink }]}>sprout</Text>
         <View style={styles.streakChip}>
@@ -30,6 +63,14 @@ export default function FeedScreen({ navigation }: any) {
           <Text style={styles.streakChipText}>{mongoUser?.currentStreak ?? 0}</Text>
         </View>
       </View>
+
+      {newCount > 0 && (
+        <Pressable style={styles.newPostsBanner} onPress={revealNewEntries}>
+          <Text style={styles.newPostsBannerText}>
+            {newCount} new {newCount === 1 ? 'post' : 'posts'} — tap to view
+          </Text>
+        </Pressable>
+      )}
 
       {duo && (
         <Pressable onPress={() => navigation?.navigate('SquadTab')}>
@@ -121,6 +162,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.stampBg,
   },
   streakChipText: { fontFamily: fonts.monoBold, fontSize: 11, color: colors.stamp },
+
+  newPostsBanner: {
+    alignSelf: 'center',
+    backgroundColor: colors.stamp,
+    borderRadius: 14,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    marginBottom: 14,
+  },
+  newPostsBannerText: { fontFamily: fonts.monoBold, fontSize: 10, color: colors.white },
 
   duoTitle: { fontFamily: fonts.monoBold, fontSize: 10, color: colors.ink, marginBottom: 8 },
   duoPhotos: { height: 100, marginBottom: 14 },

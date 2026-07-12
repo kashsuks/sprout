@@ -1,18 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { colors } from '@/theme/colors';
 import { fonts, textStyles } from '@/theme/typography';
 import { Screen } from '@/components/Screen';
 import { FlameIcon } from '@/components/FlameIcon';
 import { useActiveDuo, useUnlinkDuo } from '@/api/hooks/duo';
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 
 export default function SquadScreen({ navigation }: any) {
-  const { data, isLoading } = useActiveDuo();
+  const { data, isLoading, refetch } = useActiveDuo();
   const unlinkDuo = useUnlinkDuo();
   const duo = data?.duo;
 
+  useRefetchOnFocus(refetch);
+  const [refreshing, setRefreshing] = useState(false);
+  async function onRefresh() {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }
+
   return (
-    <Screen contentStyle={{ paddingTop: 4 }}>
+    <Screen contentStyle={{ paddingTop: 4 }} refreshing={refreshing} onRefresh={onRefresh}>
       <View style={styles.header}>
         <Text style={[textStyles.appLogo, { color: colors.ink }]}>squad</Text>
         <Pressable style={styles.addFriendsBtn} onPress={() => navigation?.navigate('AddFriends')}>
