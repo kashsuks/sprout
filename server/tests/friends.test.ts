@@ -187,4 +187,117 @@ describe("friend request lifecycle", () => {
       .set(...auth("alice"));
     expect(aliceFriends.body.friends).toHaveLength(0);
   });
+
+  it("GET /friends includes the friendshipId needed to unfriend", async () => {
+    const alice = await createUser("alice");
+    const bob = await createUser("bob");
+    const app = createApp();
+
+    const reqRes = await request(app)
+      .post("/api/v1/friends/requests")
+      .set(...auth("alice"))
+      .send({ toUserId: bob.id });
+    await request(app)
+      .post(`/api/v1/friends/requests/${reqRes.body.friendship._id}/accept`)
+      .set(...auth("bob"));
+
+    const aliceFriends = await request(app)
+      .get("/api/v1/friends")
+      .set(...auth("alice"));
+    expect(aliceFriends.body.friends[0].friendshipId).toBe(reqRes.body.friendship._id);
+  });
+});
+
+describe("blocking", () => {
+  it("blocking an existing friend unfriends them as a side effect", async () => {
+    const alice = await createUser("alice");
+    const bob = await createUser("bob");
+    const app = createApp();
+
+    const reqRes = await request(app)
+      .post("/api/v1/friends/requests")
+      .set(...auth("alice"))
+      .send({ toUserId: bob.id });
+    await request(app)
+      .post(`/api/v1/friends/requests/${reqRes.body.friendship._id}/accept`)
+      .set(...auth("bob"));
+
+    const block = await request(app).post("/api/v1/friends/block").set(...auth("alice")).send({ userId: bob.id });
+    expect(block.status).toBe(200);
+    expect(block.body.friendship.status).toBe("blocked");
+
+    const aliceFriends = await request(app).get("/api/v1/friends").set(...auth("alice"));
+    expect(aliceFriends.body.friends).toHaveLength(0);
+  });
+
+  it("blocked pairs are mutually invisible in search", async () => {
+    const alice = await createUser("alice");
+    await createUser("bobby");
+    const app = createApp();
+
+    await request(app).post("/api/v1/friends/block").set(...auth("alice")).send({ userId: (await User.findOne({ username: "bobby" }))!.id });
+
+    const aliceSearch = await request(app).get("/api/v1/friends/search?q=bob").set(...auth("alice"));
+    expect(aliceSearch.body.users).toHaveLength(0);
+
+    const bobbySearch = await request(app).get("/api/v1/friends/search?q=ali").set(...auth("bobby"));
+    expect(bobbySearch.body.users).toHaveLength(0);
+  });
+
+  it("neither side can send a friend request across a block", async () => {
+    const alice = await createUser("alice");
+    const bob = await createUser("bob");
+    const app = createApp();
+
+    await request(app).post("/api/v1/friends/block").set(...auth("alice")).send({ userId: bob.id });
+
+    const fromBlocker = await request(app)
+      .post("/api/v1/friends/requests")
+      .set(...auth("alice"))
+      .send({ toUserId: bob.id });
+    expect(fromBlocker.status).toBe(409);
+
+    const fromBlockee = await request(app)
+      .post("/api/v1/friends/requests")
+      .set(...auth("bob"))
+      .send({ toUserId: alice.id });
+    expect(fromBlockee.status).toBe(409);
+  });
+
+  it("only the blocker can remove the block", async () => {
+    const alice = await createUser("alice");
+    const bob = await createUser("bob");
+    const app = createApp();
+
+    const block = await request(app).post("/api/v1/friends/block").set(...auth("alice")).send({ userId: bob.id });
+    const friendshipId = block.body.friendship._id;
+
+    const blockeeAttempt = await request(app).delete(`/api/v1/friends/${friendshipId}`).set(...auth("bob"));
+    expect(blockeeAttempt.status).toBe(403);
+
+    const blockerAttempt = await request(app).delete(`/api/v1/friends/${friendshipId}`).set(...auth("alice"));
+    expect(blockerAttempt.status).toBe(204);
+
+    // now unblocked — a fresh request can go through
+    const retry = await request(app)
+      .post("/api/v1/friends/requests")
+      .set(...auth("alice"))
+      .send({ toUserId: bob.id });
+    expect(retry.status).toBe(201);
+  });
+
+  it("GET /friends/blocked lists users this account has blocked", async () => {
+    const alice = await createUser("alice");
+    const bob = await createUser("bob");
+    const app = createApp();
+
+    await request(app).post("/api/v1/friends/block").set(...auth("alice")).send({ userId: bob.id });
+
+    const blockedList = await request(app).get("/api/v1/friends/blocked").set(...auth("alice"));
+    expect(blockedList.body.blocked.map((u: { username: string }) => u.username)).toEqual(["bob"]);
+
+    // bob didn't place the block, so it doesn't show up on his side
+    const bobBlockedList = await request(app).get("/api/v1/friends/blocked").set(...auth("bob"));
+    expect(bobBlockedList.body.blocked).toHaveLength(0);
+  });
 });

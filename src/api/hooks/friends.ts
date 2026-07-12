@@ -1,7 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/api/client';
 
-export type Friend = { _id: string; username: string; displayName: string; avatarKey: string | null; points: number };
+export type Friend = {
+  _id: string;
+  username: string;
+  displayName: string;
+  avatarKey: string | null;
+  points: number;
+  friendshipId: string;
+};
 
 export function useFriends() {
   return useQuery({
@@ -70,5 +77,32 @@ export function useDeclineFriendRequest() {
   return useMutation({
     mutationFn: (friendshipId: string) => apiFetch<void>(`/friends/requests/${friendshipId}/decline`, { method: 'POST' }),
     onSuccess: () => invalidateFriendState(queryClient),
+  });
+}
+
+// Also doubles as "unblock" — the block endpoint reuses the same edge, and
+// the server only lets whoever placed the block delete it.
+export function useUnfriend() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (friendshipId: string) => apiFetch<void>(`/friends/${friendshipId}`, { method: 'DELETE' }),
+    onSuccess: () => invalidateFriendState(queryClient),
+  });
+}
+
+export function useBlockUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => apiFetch('/friends/block', { method: 'POST', body: { userId } }),
+    onSuccess: () => invalidateFriendState(queryClient),
+  });
+}
+
+export type BlockedUser = { _id: string; username: string; displayName: string; avatarKey: string | null; friendshipId: string };
+
+export function useBlockedUsers() {
+  return useQuery({
+    queryKey: ['friends', 'blocked'],
+    queryFn: () => apiFetch<{ blocked: BlockedUser[] }>('/friends/blocked'),
   });
 }

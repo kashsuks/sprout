@@ -4,7 +4,7 @@ import { canonicalPair, Friendship } from "../models/Friendship";
 import { User } from "../models/User";
 import { asyncHandler, HttpError } from "../middleware/errorHandler";
 import { requireMongoUser } from "../middleware/attachMongoUser";
-import { getFriendIds } from "../services/friendshipService";
+import { getFriendEdges } from "../services/friendshipService";
 
 export const friendsRouter = Router();
 friendsRouter.use(requireMongoUser);
@@ -29,16 +29,21 @@ friendsRouter.get(
       $or: matches.map((m) => canonicalPair(req.user!.id, m.id)),
     });
 
-    const users = matches.map((m) => {
-      const pair = canonicalPair(req.user!.id, m.id);
-      const edge = edges.find((e) => e.userA.toString() === pair.userA && e.userB.toString() === pair.userB);
-      let status: "none" | "friends" | "pending_outgoing" | "pending_incoming" = "none";
-      if (edge?.status === "accepted") status = "friends";
-      else if (edge?.status === "pending") {
-        status = edge.requestedBy.toString() === req.user!.id ? "pending_outgoing" : "pending_incoming";
-      }
-      return { _id: m._id, username: m.username, displayName: m.displayName, avatarKey: m.avatarKey, status };
-    });
+    // Blocked pairs (either direction) are mutually invisible in search —
+    // don't surface the block relationship itself, just omit the user.
+    const users = matches
+      .map((m) => {
+        const pair = canonicalPair(req.user!.id, m.id);
+        const edge = edges.find((e) => e.userA.toString() === pair.userA && e.userB.toString() === pair.userB);
+        let status: "none" | "friends" | "pending_outgoing" | "pending_incoming" = "none";
+        if (edge?.status === "accepted") status = "friends";
+        else if (edge?.status === "pending") {
+          status = edge.requestedBy.toString() === req.user!.id ? "pending_outgoing" : "pending_incoming";
+        }
+        return { _id: m._id, username: m.username, displayName: m.displayName, avatarKey: m.avatarKey, status, edge };
+      })
+      .filter((m) => m.edge?.status !== "blocked")
+      .map(({ edge, ...m }) => m);
 
     return res.status(200).json({ users });
   })
@@ -82,12 +87,16 @@ friendsRouter.post(
     const pair = canonicalPair(req.user!.id, toUserId);
     const existing = await Friendship.findOne(pair);
     if (existing) {
+      // Deliberately generic for the blocked case — it doesn't say who
+      // blocked whom, so a blockee probing this endpoint learns nothing.
       const message =
-        existing.status === "accepted"
-          ? "Already friends"
-          : existing.requestedBy.toString() === req.user!.id
-            ? "Request already pending"
-            : "This user has already sent you a request — accept it instead";
+        existing.status === "blocked"
+          ? "Unable to send a request to this user"
+          : existing.status === "accepted"
+            ? "Already friends"
+            : existing.requestedBy.toString() === req.user!.id
+              ? "Request already pending"
+              : "This user has already sent you a request — accept it instead";
       throw new HttpError(409, message);
     }
 
@@ -137,9 +146,56 @@ friendsRouter.post(
 friendsRouter.get(
   "/",
   asyncHandler(async (req, res) => {
-    const friendIds = await getFriendIds(req.user!.id);
-    const friends = await User.find({ _id: { $in: friendIds } }).select("username displayName avatarKey points");
+    const edges = await getFriendEdges(req.user!.id);
+    const friendshipIdByUser = new Map(edges.map((e) => [e.friendId, e.friendshipId]));
+    const users = await User.find({ _id: { $in: edges.map((e) => e.friendId) } }).select(
+      "username displayName avatarKey points"
+    );
+    const friends = users.map((u) => ({ ...u.toObject(), friendshipId: friendshipIdByUser.get(u.id) }));
     return res.status(200).json({ friends });
+  })
+);
+
+const blockTargetSchema = z.object({ userId: z.string().min(1) });
+
+// POST /api/v1/friends/block
+// Upserts the pair straight to "blocked", overwriting any prior pending or
+// accepted edge — blocking an existing friend unfriends them as a side
+// effect (getFriendIds only counts "accepted" edges).
+friendsRouter.post(
+  "/block",
+  asyncHandler(async (req, res) => {
+    const { userId } = blockTargetSchema.parse(req.body);
+    if (userId === req.user!.id) throw new HttpError(400, "Cannot block yourself");
+
+    const target = await User.findById(userId);
+    if (!target) throw new HttpError(404, "User not found");
+
+    const pair = canonicalPair(req.user!.id, userId);
+    const friendship = await Friendship.findOneAndUpdate(
+      pair,
+      { $set: { status: "blocked", requestedBy: req.user!._id } },
+      { upsert: true, new: true }
+    );
+    return res.status(200).json({ friendship });
+  })
+);
+
+// GET /api/v1/friends/blocked
+friendsRouter.get(
+  "/blocked",
+  asyncHandler(async (req, res) => {
+    const edges = await Friendship.find({ status: "blocked", requestedBy: req.user!._id }).lean();
+    const blockedIds = edges.map((e) => (e.userA.toString() === req.user!.id ? e.userB.toString() : e.userA.toString()));
+    const friendshipIdByUser = new Map(
+      edges.map((e) => [
+        (e.userA.toString() === req.user!.id ? e.userB.toString() : e.userA.toString()),
+        e._id.toString(),
+      ])
+    );
+    const users = await User.find({ _id: { $in: blockedIds } }).select("username displayName avatarKey");
+    const blocked = users.map((u) => ({ ...u.toObject(), friendshipId: friendshipIdByUser.get(u.id) }));
+    return res.status(200).json({ blocked });
   })
 );
 
@@ -165,11 +221,16 @@ friendsRouter.get(
   })
 );
 
-// DELETE /api/v1/friends/:friendshipId — unfriend
+// DELETE /api/v1/friends/:friendshipId — unfriend, or unblock if the caller
+// is the one who placed the block (a blocked user can't remove their own
+// block just by owning one side of the edge).
 friendsRouter.delete(
   "/:friendshipId",
   asyncHandler(async (req, res) => {
     const friendship = await loadOwnedFriendship(req.params.friendshipId, req.user!.id);
+    if (friendship.status === "blocked" && friendship.requestedBy.toString() !== req.user!.id) {
+      throw new HttpError(403, "Not authorized to remove this block");
+    }
     await friendship.deleteOne();
     return res.status(204).send();
   })
