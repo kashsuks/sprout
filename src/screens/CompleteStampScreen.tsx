@@ -1,186 +1,181 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, Alert, LayoutChangeEvent, useWindowDimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TextInput, Pressable, Image, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '@/theme/colors';
 import { fonts, textStyles } from '@/theme/typography';
 import { Screen } from '@/components/Screen';
-import { DashedRect } from '@/components/DashedBorder';
-import { currentUser } from '@/data/mockData';
+import { useCompleteGoal } from '@/api/hooks/entries';
+import { ApiError } from '@/api/client';
+import { SproutCelebration } from '@/components/SproutCelebration';
 
-const STICKERS = ['🔥', '❤️', '⭐', '🏆'];
+const CELEBRATIONS = [
+  { emoji: '🌱', msg: 'sprouted.' },
+  { emoji: '🌿', msg: 'new growth, right there.' },
+  { emoji: '🍃', msg: 'well tended.' },
+  { emoji: '🌼', msg: 'look at that bloom.' },
+  { emoji: '🌾', msg: 'rooted for today.' },
+];
 
 export default function CompleteStampScreen({ route, navigation }: any) {
-  const task = route?.params?.task ?? { title: 'stretch 10 min' };
-  const { height: windowHeight } = useWindowDimensions();
+  const goalId = route?.params?.goalId as string | undefined;
+  const title = (route?.params?.title as string | undefined) ?? 'task';
+
+  const completeGoal = useCompleteGoal();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [contentType, setContentType] = useState<'image/jpeg' | 'image/png'>('image/jpeg');
   const [caption, setCaption] = useState('');
-  const [selectedSticker, setSelectedSticker] = useState<string | null>(null);
-  const [viewfinderSize, setViewfinderSize] = useState({ width: 0, height: 0 });
-  const [btnSize, setBtnSize] = useState({ width: 0, height: 0 });
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [celebration, setCelebration] = useState<{ emoji: string; msg: string; streak: number } | null>(null);
 
-  const onViewfinderLayout = useCallback((e: LayoutChangeEvent) => {
-    setViewfinderSize(e.nativeEvent.layout);
-  }, []);
-  const onBtnLayout = useCallback((e: LayoutChangeEvent) => {
-    setBtnSize(e.nativeEvent.layout);
-  }, []);
+  if (!goalId) return null;
 
-  // Cap the photo viewfinder's height on shorter phones so the caption
-  // input and STAMP IT button are never pushed below the fold.
-  const viewfinderMaxHeight = Math.min(windowHeight * 0.34, 320);
+  function applyPickerResult(result: ImagePicker.ImagePickerResult) {
+    if (!result.canceled) {
+      setPhotoUri(result.assets[0].uri);
+      setContentType(result.assets[0].mimeType === 'image/png' ? 'image/png' : 'image/jpeg');
+    }
+  }
 
-  async function pickPhoto() {
+  async function takePhoto() {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
       Alert.alert('Camera access needed', 'Enable camera access to stamp this task with a photo.');
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true });
-    if (!result.canceled) setPhotoUri(result.assets[0].uri);
+    applyPickerResult(await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true }));
+  }
+
+  async function chooseFromLibrary() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Photo access needed', 'Enable photo library access to upload an image.');
+      return;
+    }
+    applyPickerResult(
+      await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, allowsEditing: true })
+    );
+  }
+
+  function pickPhoto() {
+    Alert.alert('Add a photo', undefined, [
+      { text: 'Take Photo', onPress: takePhoto },
+      { text: 'Choose from Library', onPress: chooseFromLibrary },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   }
 
   function stampIt() {
-    // TODO: upload photoUri to DO Spaces via presigned URL, then POST /entries
-    navigation?.navigate('Feed');
+    if (!photoUri) return;
+    setErrorMessage(null);
+    completeGoal.mutate(
+      { goalId: goalId!, photoUri, contentType, caption },
+      {
+        onSuccess: (data) => {
+          const pick = CELEBRATIONS[Math.floor(Math.random() * CELEBRATIONS.length)];
+          setCelebration({ ...pick, streak: data.user.currentStreak });
+          setTimeout(() => navigation?.goBack(), 1650);
+        },
+        onError: (err) => {
+          setErrorMessage(
+            err instanceof ApiError
+              ? err.message
+              : 'Photo upload is not available yet — the server storage isn\'t configured.'
+          );
+        },
+      }
+    );
+  }
+
+  if (celebration) {
+    return (
+      <Screen scroll={false}>
+        <SproutCelebration
+          emoji={celebration.emoji}
+          message={celebration.msg}
+          streakLine={`${celebration.streak} day streak`}
+        />
+      </Screen>
+    );
   }
 
   return (
     <Screen contentStyle={{ paddingTop: 4 }}>
-      <Text style={[textStyles.appLogo, { color: colors.ink, fontSize: 15, marginBottom: 8 }]}>
-        {task.title}
-      </Text>
-
-      <View style={styles.strip}>
-        <Text style={styles.stripText}>day {currentUser.streak} streak</Text>
-        <Text style={styles.stripPoints}>+15 pts</Text>
-      </View>
-
-      <Pressable
-        style={[styles.viewfinder, { maxHeight: viewfinderMaxHeight }]}
-        onPress={pickPhoto}
-        onLayout={onViewfinderLayout}
-      >
-        {viewfinderSize.width > 0 && (
-          <DashedRect
-            width={viewfinderSize.width}
-            height={viewfinderSize.height}
-            radius={6}
-            color={colors.inkSoft}
-            strokeWidth={1.5}
-            dash={[5, 4]}
-          />
-        )}
-        {photoUri ? <View style={styles.photoPreview} /> : <Text style={{ fontSize: 26 }}>📷</Text>}
+      <Pressable onPress={() => navigation?.goBack()}>
+        <Text style={styles.back}>← back</Text>
       </Pressable>
+      <Text style={[textStyles.appLogo, { color: colors.ink, fontSize: 15, marginVertical: 8 }]}>{title}</Text>
+      <Text style={styles.subtitle}>a photo is required to stamp this one done</Text>
 
-      <View style={styles.stickerTray}>
-        {STICKERS.map((s) => (
-          <Pressable
-            key={s}
-            hitSlop={4}
-            style={({ pressed }) => [
-              styles.sticker,
-              selectedSticker === s && styles.stickerOn,
-              pressed && styles.stickerPressed,
-            ]}
-            onPress={() => setSelectedSticker(s)}
-          >
-            <Text style={{ fontSize: 12 }}>{s}</Text>
-          </Pressable>
-        ))}
-        <Pressable style={({ pressed }) => [styles.sticker, pressed && styles.stickerPressed]}>
-          <Text style={{ fontSize: 12, color: colors.inkSoft }}>+</Text>
-        </Pressable>
-      </View>
+      <Pressable style={styles.viewfinder} onPress={pickPhoto}>
+        {photoUri ? (
+          <Image source={{ uri: photoUri }} style={StyleSheet.absoluteFillObject as any} resizeMode="cover" />
+        ) : (
+          <>
+            <Text style={{ fontSize: 38 }}>📷</Text>
+            <Text style={styles.viewfinderHint}>tap to add a photo</Text>
+          </>
+        )}
+      </Pressable>
 
       <TextInput
         style={styles.captionInput}
-        placeholder="say something about it..."
+        placeholder="say something about it... (optional)"
         placeholderTextColor={colors.inkSoft}
         value={caption}
         onChangeText={setCaption}
         returnKeyType="done"
-        blurOnSubmit
       />
 
+      {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+
       <Pressable
-        style={({ pressed }) => [styles.stampBtn, pressed && styles.stampBtnPressed]}
+        style={[styles.stampBtn, (!photoUri || completeGoal.isPending) && styles.stampBtnDisabled]}
+        disabled={!photoUri || completeGoal.isPending}
         onPress={stampIt}
-        onLayout={onBtnLayout}
       >
-        {btnSize.width > 0 && (
-          <DashedRect width={btnSize.width} height={btnSize.height} radius={8} color={colors.stamp} strokeWidth={1.5} />
-        )}
-        <Text style={styles.stampBtnText}>STAMP IT</Text>
+        <Text style={styles.stampBtnText}>{completeGoal.isPending ? 'stamping...' : 'SPROUT IT'}</Text>
       </Pressable>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  strip: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 6,
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    marginBottom: 10,
-  },
-  stripText: { fontFamily: fonts.mono, fontSize: 10, color: colors.ink },
-  stripPoints: { fontFamily: fonts.monoBold, fontSize: 10, color: colors.forest },
+  back: { fontFamily: fonts.mono, fontSize: 11, color: colors.inkSoft },
+  subtitle: { fontFamily: fonts.mono, fontSize: 9.5, color: colors.inkSoft, marginBottom: 10 },
 
   viewfinder: {
-    position: 'relative',
     aspectRatio: 1,
     borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.inkSoft,
+    borderStyle: 'dashed',
     backgroundColor: colors.forestBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
     overflow: 'hidden',
   },
-  photoPreview: { ...StyleSheet.absoluteFillObject, borderRadius: 6, backgroundColor: colors.line },
-
-  stickerTray: { flexDirection: 'row', gap: 7, marginBottom: 9 },
-  sticker: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stickerOn: { borderColor: colors.stamp, backgroundColor: colors.stampBg },
-  stickerPressed: { opacity: 0.6 },
+  viewfinderHint: { fontFamily: fonts.mono, fontSize: 9, color: colors.inkSoft, marginTop: 6 },
 
   captionInput: {
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
-    fontFamily: fonts.handwritingRegular,
-    fontSize: 15,
+    ...textStyles.caption,
     color: colors.ink,
     paddingVertical: 7,
-    marginBottom: 12,
+    marginBottom: 9,
   },
 
+  error: { ...textStyles.body, color: colors.navy, marginBottom: 12 },
+
   stampBtn: {
-    position: 'relative',
+    borderWidth: 1.5,
+    borderColor: colors.stamp,
+    borderStyle: 'dashed',
     borderRadius: 8,
     paddingVertical: 11,
     alignItems: 'center',
-    overflow: 'hidden',
   },
-  stampBtnPressed: { opacity: 0.75 },
-  stampBtnText: {
-    fontFamily: fonts.typewriter,
-    fontSize: 12,
-    color: colors.stamp,
-    letterSpacing: 1,
-  },
+  stampBtnDisabled: { opacity: 0.35 },
+  stampBtnText: { fontFamily: fonts.monoBold, fontSize: 12, color: colors.stamp, letterSpacing: 1 },
 });

@@ -1,26 +1,34 @@
 {
   "expo": {
-    "name": "still",
-    "slug": "still",
+    "name": "sprout",
+    "slug": "sprout",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "backgroundColor": "#2e2015",
+    "backgroundColor": "#1e2a1f",
     "splash": {
-      "backgroundColor": "#2e2015"
+      "backgroundColor": "#1e2a1f"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.still.app",
+      "bundleIdentifier": "com.sprout.app",
       "infoPlist": {
-        "NSContactsUsageDescription": "still uses your contacts to help you find friends who are already using the app.",
-        "NSCameraUsageDescription": "still uses your camera to let you stamp your completed tasks with a photo.",
-        "NSPhotoLibraryUsageDescription": "still lets you attach a photo from your library when you stamp a task."
+        "NSContactsUsageDescription": "sprout uses your contacts to help you find friends who are already using the app.",
+        "NSCameraUsageDescription": "sprout uses your camera to let you stamp your completed tasks with a photo.",
+        "NSPhotoLibraryUsageDescription": "sprout lets you attach a photo from your library when you stamp a task."
       }
     },
     "android": {
-      "package": "com.still.app",
-      "permissions": ["READ_CONTACTS", "CAMERA"]
-    }
+      "package": "com.sprout.app",
+      "permissions": [
+        "READ_CONTACTS",
+        "CAMERA"
+      ]
+    },
+    "plugins": [
+      "expo-font",
+      "expo-secure-store",
+      "expo-asset"
+    ]
   }
 }

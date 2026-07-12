@@ -31,7 +31,7 @@ export function Stamp({
     <View
       style={[
         styles.wrap,
-        { width: size, height: size, transform: [{ rotate: `${rotation}deg` }] },
+        { width: size, height: size, alignSelf: 'flex-start', transform: [{ rotate: `${rotation}deg` }] },
       ]}
     >
       {dashed ? (
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontFamily: fonts.typewriter,
+    fontFamily: fonts.monoBold,
     textAlign: 'center',
   },
 });

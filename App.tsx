@@ -6,8 +6,36 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAppFonts } from '@/theme/typography';
 import { colors } from '@/theme/colors';
 import RootNavigator from '@/navigation/RootNavigator';
+import AuthNavigator from '@/navigation/AuthNavigator';
+import OnboardingScreen from '@/screens/auth/OnboardingScreen';
+import PreferencesScreen from '@/screens/auth/PreferencesScreen';
+import { useAuthStore } from '@/store/useAuthStore';
 
 const queryClient = new QueryClient();
+
+function Gate() {
+  const status = useAuthStore((s) => s.status);
+
+  if (status === 'loading') {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator color={colors.stamp} />
+      </View>
+    );
+  }
+
+  if (status === 'signedOut') return <AuthNavigator />;
+
+  if (status === 'needsBootstrap') {
+    return <OnboardingScreen />;
+  }
+
+  if (status === 'needsPreferences') {
+    return <PreferencesScreen />;
+  }
+
+  return <RootNavigator />;
+}
 
 export default function App() {
   const [fontsLoaded] = useAppFonts();
@@ -24,7 +52,7 @@ export default function App() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <StatusBar style="dark" />
-        <RootNavigator />
+        <Gate />
       </QueryClientProvider>
     </SafeAreaProvider>
   );
