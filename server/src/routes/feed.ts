@@ -3,7 +3,7 @@ import { Types } from "mongoose";
 import { Duo } from "../models/Duo";
 import { Entry } from "../models/Entry";
 import { User } from "../models/User";
-import { asyncHandler } from "../middleware/errorHandler";
+import { asyncHandler, HttpError } from "../middleware/errorHandler";
 import { requireMongoUser } from "../middleware/attachMongoUser";
 import { getFriendIds } from "../services/friendshipService";
 import { photoDataUri } from "../utils/photo";
@@ -37,11 +37,16 @@ feedRouter.get(
     const nextCursor = entries.length === limit ? entries[entries.length - 1]!._id : null;
 
     return res.status(200).json({
-      entries: entries.map((entry) => ({
-        ...entry.toObject(),
-        photoUrl: photoDataUri(entry),
-        author: authorById.get(entry.userId.toString()) ?? null,
-      })),
+      entries: entries.map((entry) => {
+        const { likedBy, ...rest } = entry.toObject();
+        return {
+          ...rest,
+          photoUrl: photoDataUri(entry),
+          author: authorById.get(entry.userId.toString()) ?? null,
+          likeCount: likedBy?.length ?? 0,
+          likedByMe: (likedBy ?? []).some((id: Types.ObjectId) => id.equals(req.user!._id)),
+        };
+      }),
       nextCursor,
     });
   })
@@ -75,5 +80,46 @@ feedRouter.get(
         caption: entryB?.caption || entryA?.caption || "",
       },
     });
+  })
+);
+
+// Shared guard for the like/unlike endpoints: the entry must exist and must
+// belong to the caller or one of their accepted friends — otherwise someone
+// could like an arbitrary entry they were never shown in their own feed.
+async function findLikeableEntry(req: import("express").Request) {
+  const { entryId } = req.params;
+  if (!Types.ObjectId.isValid(entryId)) throw new HttpError(400, "Invalid entry id");
+
+  const entry = await Entry.findById(entryId);
+  if (!entry) throw new HttpError(404, "Entry not found");
+
+  if (entry.userId.toString() !== req.user!.id) {
+    const friendIds = await getFriendIds(req.user!.id);
+    if (!friendIds.some((id) => id.toString() === entry.userId.toString())) {
+      throw new HttpError(404, "Entry not found");
+    }
+  }
+  return entry;
+}
+
+// POST /api/v1/feed/:entryId/like
+feedRouter.post(
+  "/:entryId/like",
+  asyncHandler(async (req, res) => {
+    const entry = await findLikeableEntry(req);
+    await Entry.updateOne({ _id: entry._id }, { $addToSet: { likedBy: req.user!._id } });
+    const likeCount = await Entry.findById(entry._id).select("likedBy").then((e) => e?.likedBy.length ?? 0);
+    return res.status(200).json({ likeCount, likedByMe: true });
+  })
+);
+
+// DELETE /api/v1/feed/:entryId/like
+feedRouter.delete(
+  "/:entryId/like",
+  asyncHandler(async (req, res) => {
+    const entry = await findLikeableEntry(req);
+    await Entry.updateOne({ _id: entry._id }, { $pull: { likedBy: req.user!._id } });
+    const likeCount = await Entry.findById(entry._id).select("likedBy").then((e) => e?.likedBy.length ?? 0);
+    return res.status(200).json({ likeCount, likedByMe: false });
   })
 );
