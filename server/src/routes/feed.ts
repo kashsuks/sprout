@@ -6,6 +6,7 @@ import { User } from "../models/User";
 import { asyncHandler } from "../middleware/errorHandler";
 import { requireMongoUser } from "../middleware/attachMongoUser";
 import { getFriendIds } from "../services/friendshipService";
+import { getDiscoverEntries } from "../services/discoverFeedService";
 import { photoDataUri } from "../utils/photo";
 
 export const feedRouter = Router();
@@ -22,7 +23,20 @@ feedRouter.get(
     const cursor = typeof req.query.cursor === "string" ? req.query.cursor : undefined;
 
     const friendIds = await getFriendIds(req.user!.id);
-    if (friendIds.length === 0) return res.status(200).json({ entries: [], nextCursor: null });
+    if (friendIds.length === 0) {
+      let discoverEntries: Awaited<ReturnType<typeof getDiscoverEntries>> = [];
+      try {
+        discoverEntries = await getDiscoverEntries(req.user!.id, limit);
+      } catch {
+        // Vector index not configured/ready yet (local dev, still building) —
+        // degrade to the plain empty-feed behavior instead of a 500.
+      }
+      return res.status(200).json({
+        entries: discoverEntries,
+        nextCursor: null, // vector search isn't stably cursor-paginated — v1 returns page 1 only
+        source: discoverEntries.length > 0 ? "discover" : "friends",
+      });
+    }
 
     const query: Record<string, unknown> = { userId: { $in: friendIds } };
     if (cursor && Types.ObjectId.isValid(cursor)) {
@@ -43,6 +57,7 @@ feedRouter.get(
         author: authorById.get(entry.userId.toString()) ?? null,
       })),
       nextCursor,
+      source: "friends",
     });
   })
 );

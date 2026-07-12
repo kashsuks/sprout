@@ -4,6 +4,7 @@ import { colors } from '@/theme/colors';
 import { fonts, textStyles } from '@/theme/typography';
 import { Screen } from '@/components/Screen';
 import { useSavePreferences } from '@/api/hooks/users';
+import { useAuthStore } from '@/store/useAuthStore';
 
 const PREFERENCE_OPTIONS = [
   { id: 'fitness', emoji: '💪', label: 'fitness' },
@@ -16,9 +17,11 @@ const PREFERENCE_OPTIONS = [
   { id: 'cooking', emoji: '🍳', label: 'cooking & food' },
 ];
 
-export default function PreferencesScreen() {
+export default function PreferencesScreen({ navigation }: any = {}) {
+  const mongoUser = useAuthStore((s) => s.mongoUser);
+  const isEditing = mongoUser?.hasSetPreferences ?? false;
   const savePreferences = useSavePreferences();
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set(mongoUser?.contentPreferences ?? []));
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -29,7 +32,7 @@ export default function PreferencesScreen() {
   }
 
   function submit() {
-    savePreferences.mutate([...selected]);
+    savePreferences.mutate([...selected], { onSuccess: () => navigation?.goBack?.() });
   }
 
   return (
@@ -53,7 +56,9 @@ export default function PreferencesScreen() {
         {savePreferences.isPending ? (
           <ActivityIndicator color={colors.card} />
         ) : (
-          <Text style={styles.buttonText}>{selected.size > 0 ? 'continue' : 'skip for now'}</Text>
+          <Text style={styles.buttonText}>
+            {isEditing ? 'save' : selected.size > 0 ? 'continue' : 'skip for now'}
+          </Text>
         )}
       </Pressable>
     </Screen>

@@ -233,6 +233,11 @@ export default function ProfileScreen({ navigation }: any) {
         />
       </Pressable>
 
+      <Pressable style={styles.privacyRow} onPress={() => navigation?.navigate('EditPreferences')}>
+        <Text style={styles.privacyLabel}>interests · for you feed</Text>
+        <Text style={styles.viewAllLink}>edit →</Text>
+      </Pressable>
+
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionLabel}>scrapbook · this week</Text>
         <Pressable onPress={openScrapbook}>

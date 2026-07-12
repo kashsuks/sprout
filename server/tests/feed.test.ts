@@ -12,6 +12,9 @@ vi.mock("../src/config/firebase", () => ({
   },
 }));
 
+const searchGoalsByText = vi.fn();
+vi.mock("../src/services/vectorSearchService", () => ({ searchGoalsByText }));
+
 const { createApp } = await import("../src/app");
 const { User } = await import("../src/models/User");
 const { Goal } = await import("../src/models/Goal");
@@ -26,14 +29,21 @@ beforeAll(async () => {
 
 afterEach(async () => {
   await clearTestDb();
+  searchGoalsByText.mockReset();
 });
 
 afterAll(async () => {
   await disconnectTestDb();
 });
 
-async function createUser(firebaseUid: string) {
-  return User.create({ firebaseUid, username: firebaseUid, displayName: firebaseUid, emailHash: `${firebaseUid}-hash` });
+async function createUser(firebaseUid: string, overrides: Record<string, unknown> = {}) {
+  return User.create({
+    firebaseUid,
+    username: firebaseUid,
+    displayName: firebaseUid,
+    emailHash: `${firebaseUid}-hash`,
+    ...overrides,
+  });
 }
 
 async function befriend(a: string, b: string) {
@@ -81,7 +91,7 @@ describe("GET /api/v1/feed", () => {
     expect(res.body.entries[0].author.username).toBe("bob");
   });
 
-  it("returns an empty feed with no friends", async () => {
+  it("returns an empty feed with no friends and no content preferences", async () => {
     await createUser("alice");
     const app = createApp();
     const res = await request(app)
@@ -89,6 +99,40 @@ describe("GET /api/v1/feed", () => {
       .set(...auth("alice"));
     expect(res.body.entries).toEqual([]);
     expect(res.body.nextCursor).toBeNull();
+    expect(res.body.source).toBe("friends");
+    expect(searchGoalsByText).not.toHaveBeenCalled();
+  });
+
+  it("falls back to discover entries matching content preferences when the caller has no friends", async () => {
+    await createUser("alice", { contentPreferences: ["fitness"] });
+    const bob = await createUser("bob", { friendsOnlyProfile: false });
+    const entry = await postEntry(bob.id, "2026-07-10");
+    searchGoalsByText.mockResolvedValue([{ goalId: entry.goalId.toString(), userId: bob.id, title: "run", score: 0.9 }]);
+
+    const app = createApp();
+    const res = await request(app)
+      .get("/api/v1/feed")
+      .set(...auth("alice"));
+
+    expect(res.status).toBe(200);
+    expect(res.body.source).toBe("discover");
+    expect(res.body.entries).toHaveLength(1);
+    expect(res.body.entries[0].author.username).toBe("bob");
+    expect(res.body.nextCursor).toBeNull();
+  });
+
+  it("degrades to an empty friends-source feed when vector search fails", async () => {
+    await createUser("alice", { contentPreferences: ["fitness"] });
+    searchGoalsByText.mockRejectedValue(new Error("index not ready"));
+
+    const app = createApp();
+    const res = await request(app)
+      .get("/api/v1/feed")
+      .set(...auth("alice"));
+
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toEqual([]);
+    expect(res.body.source).toBe("friends");
   });
 
   it("paginates with a cursor, newest first", async () => {

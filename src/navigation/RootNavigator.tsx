@@ -16,6 +16,7 @@ import LinkDuoScreen from '@/screens/LinkDuoScreen';
 import AddFriendsScreen from '@/screens/AddFriendsScreen';
 import ProfileScreen from '@/screens/ProfileScreen';
 import WrappedScreen from '@/screens/WrappedScreen';
+import PreferencesScreen from '@/screens/auth/PreferencesScreen';
 
 const Tab = createBottomTabNavigator();
 const FeedStack = createNativeStackNavigator();
@@ -60,6 +61,7 @@ function ProfileStackNavigator() {
     <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
       <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
       <ProfileStack.Screen name="Wrapped" component={WrappedScreen} options={{ presentation: 'transparentModal', animation: 'fade' }} />
+      <ProfileStack.Screen name="EditPreferences" component={PreferencesScreen} />
     </ProfileStack.Navigator>
   );
 }
