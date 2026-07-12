@@ -1,82 +1,118 @@
-# sprout
+# 🌱 sprout
 
-A little habit-tracking app for people who'd rather see a stamp on a paper
-ticket than a progress bar. You do a thing, you take a photo of it, it gets
-stamped into your feed. Streaks, a duo mode for keeping a friend honest, a
-squad leaderboard, the usual.
+![Expo SDK 54](https://img.shields.io/badge/Expo-SDK%2054-000020?logo=expo&logoColor=white)
+![React Native](https://img.shields.io/badge/React%20Native-0.81-61DAFB?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
+![Node/Express](https://img.shields.io/badge/Node-Express-339933?logo=node.js&logoColor=white)
+![MongoDB Atlas Vector Search](https://img.shields.io/badge/MongoDB-Atlas%20Vector%20Search-47A248?logo=mongodb&logoColor=white)
+![Firebase Auth](https://img.shields.io/badge/Auth-Firebase-FFCA28?logo=firebase&logoColor=black)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-This repo is the mobile app — Expo/React Native, built to match a set of
-mockups pixel-for-pixel before any backend was in the picture. Right now
-everything on screen is backed by fake data in `src/data/mockData.ts`, so you
-can poke around the whole UI without standing up a server.
+A habit-tracking app for people who'd rather see a wax stamp on a paper
+ticket than a progress bar. Do a thing, take a photo, get it stamped into
+your feed. Streaks, a duo mode for keeping a friend honest, a squad
+leaderboard, and a monthly recap that actually feels like *your* month
+instead of a generic stats screen.
+
+## What makes this one fun
+
+- **A feed that isn't dead on day one.** Brand new account, zero friends
+  added yet? Instead of staring at an empty feed, sprout runs a MongoDB
+  Atlas Vector Search query against your onboarding interests and surfaces
+  real stamped entries from public profiles that match what you're into.
+  It's the "For You" problem solved without an ML pipeline you have to
+  babysit — Atlas embeds and searches goal titles automatically.
+- **Likes, done properly.** You can like your own stuff, a friend's stuff,
+  or anything from a public (non friends-only) profile — including the
+  discover-feed posts above — but the API enforces exactly that boundary
+  server-side, not just in the UI.
+- **A duo mode with real stakes.** Link a task with a friend and you share
+  a streak: both of you have to stamp it the same day or it resets. No
+  half-measures.
+- **Wrapped, but honest.** The monthly recap screen (stats grid, a little
+  garden of sprout icons for everything you completed, "steadiest habit"
+  and "busiest day" highlights, a shareable card) is built entirely from
+  real data — nothing on that screen is a placeholder number.
+- **A scrapbook worth opening.** Your photo history, grouped by week, with
+  an honestly-overengineered transition animation when you open it from
+  your profile — the filmstrip preview physically expands, rotates, and
+  the photos fly into their grid slots. Was it necessary? No. Is it in
+  there? Yes.
+
+## Everything else it does
+
+- Firebase email/password auth, with a post-signup preferences modal that
+  captures what kind of content you want to see (this is what feeds the
+  discover search above)
+- Friends: search, send/accept/decline requests, unfriend
+- Tasks/goals with daily, weekly, or one-off recurrence, photo-verified
+  completion, points + streak tracking
+- Squad leaderboard with lifetime / today / streak tabs
+- Pins (achievements) awarded automatically off streak and completion
+  milestones
+- Per-user privacy: friends-only profiles are respected everywhere
+  (profile views, the feed, and the like permission check)
+
+## Project layout
+
+This is two apps in one repo:
+
+```
+.
+├── App.tsx, src/          # Expo/React Native app
+│   ├── screens/           # one file per screen, feature-named
+│   ├── api/hooks/         # react-query hooks, one file per backend resource
+│   ├── store/              # auth state (zustand)
+│   └── theme/              # colors, fonts, shared type styles
+└── server/                 # Express + MongoDB (Mongoose) API
+    ├── src/routes/         # one router per resource
+    ├── src/services/       # business logic (streaks, pins, vector search, discover feed)
+    ├── src/models/         # Mongoose schemas
+    └── tests/               # vitest + supertest, run against an in-memory Mongo
+```
 
 ## Running it
 
-You'll need Node installed, and either Xcode (for the iOS Simulator), Android
-Studio (for an emulator), or just the Expo Go app on your phone.
+You'll need Node, an Expo-compatible way to run the app (Xcode/iOS
+Simulator, Android Studio/emulator, or the Expo Go app on your phone), and
+a MongoDB Atlas cluster + Firebase project of your own.
+
+**1. Backend**
+
+```bash
+cd server
+npm install
+cp .env.example .env   # fill in MONGODB_URI + Firebase Admin credentials
+npm run dev
+```
+
+The vector-search discover feed needs one extra one-time step against your
+Atlas cluster:
+
+```bash
+npm run setup:vector-index
+```
+
+**2. Frontend**
 
 ```bash
 npm install
+cp .env.example .env   # fill in your Firebase Web App config + API URL
 npx expo start
 ```
 
-That opens the Metro bundler in your terminal. From there:
+Then press `i` (iOS Simulator), `a` (Android emulator), or scan the QR code
+with Expo Go on your phone.
 
-- Press `i` to launch the iOS Simulator
-- Press `a` for an Android emulator
-- Or scan the QR code with the Expo Go app on your phone (fastest if you
-  don't want to deal with simulators)
+**3. Tests**
 
-No environment variables, no API keys, nothing else to configure — it's a
-self-contained frontend right now.
+```bash
+cd server
+npm test
+```
 
-## What's actually here
+## Tech stack
 
-Seven screens, wired into a bottom tab bar:
-
-| Screen | What it does |
-|---|---|
-| Feed | Friends' completed tasks, plus a pinned "duo" card at the top |
-| Leaderboard | Points ranking among friends |
-| New Entry → Complete/Stamp | Pick a task, snap a photo, add a caption, stamp it done |
-| Squad → Link Duo | Pair up with a friend on a task so you keep each other accountable |
-| Profile | Your stats, streak, points |
-
-The visual system lives in `src/theme` and `src/components`:
-
-- `theme/colors.ts` and `theme/typography.ts` — color tokens and fonts
-  (Fraunces, Caveat, Special Elite, IBM Plex Mono) pulled straight from the
-  mockup
-- `components/DashedBorder.tsx` — a hand-rolled SVG dashed border, because
-  React Native's native `borderStyle: 'dashed'` renders differently on iOS
-  vs. Android and looks wrong on one of them no matter what you do
-- `components/Stamp.tsx` — the rotated wax-stamp badge used for streaks and
-  task tags throughout the app
-- `components/Ticket.tsx` / `DashedCard.tsx` — the torn-ticket and
-  dashed-card layouts from the New Entry and Feed screens
-
-If you're changing how something looks, it's almost certainly one of these
-four files plus whichever screen you're touching.
-
-## What's not here yet
-
-This branch is UI-only. Specifically missing:
-
-- A backend — every screen reads from `src/data/mockData.ts`, nothing is
-  persisted or fetched over the network
-- Auth of any kind
-- Real photo upload — the Complete/Stamp screen will happily ask for camera
-  permission and let you take a photo, but it doesn't go anywhere yet
-  (see the TODO in `CompleteStampScreen.tsx`)
-- Contacts-based friend finding
-- Push notifications
-
-Heads up: `package.json` and `app.json` still call the project `still`
-internally (bundle identifier, slug, etc.) even though the app itself is
-`sprout` now — that's a rename that happened in the README before it made it
-into the config. Worth cleaning up before this ships anywhere.
-
-There's more advanced work (a real Express/MongoDB backend, auth, a
-vector-search-backed feed, likes, friends) further along on other branches
-in this repo — this branch is the clean starting point before any of that
-landed.
+Expo / React Native · TypeScript · React Navigation · TanStack Query ·
+Zustand · Express · Mongoose · MongoDB Atlas (incl. Vector Search) ·
+Firebase Auth · Vitest
