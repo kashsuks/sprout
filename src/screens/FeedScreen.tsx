@@ -28,6 +28,7 @@ export default function FeedScreen({ navigation }: any) {
   const toggleLike = useToggleLike();
 
   const allEntries = feedData?.entries ?? [];
+  const source = feedData?.source ?? 'friends';
   const duo = duoData?.duo;
 
   // Newly-polled entries don't appear in the list immediately — they're held
@@ -107,52 +108,63 @@ export default function FeedScreen({ navigation }: any) {
       {feedLoading ? (
         <ActivityIndicator color={colors.stamp} style={{ marginTop: 24 }} />
       ) : entries.length === 0 ? (
-        <Text style={styles.emptyHint}>no entries from friends yet — add friends and start sprouting</Text>
+        <Text style={styles.emptyHint}>
+          no entries from friends yet — add friends, or set your interests in your profile to discover people to
+          follow
+        </Text>
       ) : (
-        entries.map((entry) => {
-          const name = entry.author?.displayName ?? entry.author?.username ?? 'someone';
-          const avatarColor = avatarColorFor(entry.author?.username ?? entry._id);
-          return (
-            <View key={entry._id} style={styles.visaCard}>
-              <Pressable
-                style={styles.visaHeader}
-                disabled={!entry.author}
-                onPress={() => navigation?.navigate('UserProfile', { userId: entry.author!._id })}
-              >
-                <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
-                  <Text style={styles.avatarText}>{name[0]?.toUpperCase()}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.visaName}>{name}</Text>
-                  <Text style={styles.visaTask}>{entry.taskTitle}</Text>
-                </View>
-              </Pressable>
-
-              <View style={styles.visaPhoto}>
-                <Image source={{ uri: entry.photoUrl }} style={StyleSheet.absoluteFillObject as any} resizeMode="cover" />
-                <View style={styles.stampCorner}>
-                  <Stamp label={abbrev(entry.taskTitle)} size={30} color={colors.stamp} rotation={10} fontSize={9} />
-                </View>
-              </View>
-
-              {entry.caption ? <Text style={styles.visaCaption}>{entry.caption}</Text> : null}
-
-              <View style={styles.statsRow}>
+        <>
+          {source === 'discover' && (
+            <Text style={styles.discoverBanner}>
+              ✨ recommended for you — you don't have friends yet, so here's content matching your interests
+            </Text>
+          )}
+          {entries.map((entry) => {
+            const name = entry.author?.displayName ?? entry.author?.username ?? 'someone';
+            const avatarColor = avatarColorFor(entry.author?.username ?? entry._id);
+            return (
+              <View key={entry._id} style={styles.visaCard}>
                 <Pressable
-                  style={styles.likeRow}
-                  hitSlop={8}
-                  onPress={() => toggleLike.mutate({ entryId: entry._id, like: !entry.likedByMe })}
+                  style={styles.visaHeader}
+                  disabled={!entry.author}
+                  onPress={() => navigation?.navigate('UserProfile', { userId: entry.author!._id })}
                 >
-                  <HeartIcon size={19} filled={entry.likedByMe} />
-                  <Text style={[styles.likeCount, entry.likedByMe && { color: colors.stamp }]}>
-                    {entry.likeCount}
-                  </Text>
+                  <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
+                    <Text style={styles.avatarText}>{name[0]?.toUpperCase()}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.visaName}>{name}</Text>
+                    <Text style={styles.visaTask}>{entry.taskTitle}</Text>
+                  </View>
                 </Pressable>
-                <Text style={styles.visaStatsText}>+{entry.pointsAwarded} points</Text>
+
+                <View style={styles.visaPhoto}>
+                  <Image source={{ uri: entry.photoUrl }} style={StyleSheet.absoluteFillObject as any} resizeMode="cover" />
+                  <View style={styles.stampCorner}>
+                    <Stamp label={abbrev(entry.taskTitle)} size={30} color={colors.stamp} rotation={10} fontSize={9} />
+                  </View>
+                </View>
+
+                {entry.caption ? <Text style={styles.visaCaption}>{entry.caption}</Text> : null}
+
+                <View style={styles.statsRow}>
+                  <Pressable
+                    style={styles.likeRow}
+                    hitSlop={8}
+                    disabled={source === 'discover'}
+                    onPress={() => toggleLike.mutate({ entryId: entry._id, like: !entry.likedByMe })}
+                  >
+                    <HeartIcon size={19} filled={entry.likedByMe} />
+                    <Text style={[styles.likeCount, entry.likedByMe && { color: colors.stamp }]}>
+                      {entry.likeCount}
+                    </Text>
+                  </Pressable>
+                  <Text style={styles.visaStatsText}>+{entry.pointsAwarded} points</Text>
+                </View>
               </View>
-            </View>
-          );
-        })
+            );
+          })}
+        </>
       )}
     </Screen>
   );
@@ -213,6 +225,17 @@ const styles = StyleSheet.create({
   duoFlame: { fontFamily: fonts.monoBold, fontSize: 9.5, color: colors.stamp },
 
   emptyHint: { fontFamily: fonts.mono, fontSize: 10, color: colors.inkSoft, textAlign: 'center', paddingVertical: 24 },
+  discoverBanner: {
+    fontFamily: fonts.mono,
+    fontSize: 9.5,
+    color: colors.stamp,
+    backgroundColor: colors.stampBg,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
 
   visaCard: {
     backgroundColor: colors.card,

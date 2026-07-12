@@ -17,7 +17,7 @@ export type FeedEntry = {
   likedByMe: boolean;
 };
 
-type FeedResponse = { entries: FeedEntry[]; nextCursor: string | null };
+type FeedResponse = { entries: FeedEntry[]; nextCursor: string | null; source: 'friends' | 'discover' };
 
 export function useFeed(options?: { refetchInterval?: number | false }) {
   return useQuery({
