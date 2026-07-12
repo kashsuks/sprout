@@ -6,7 +6,7 @@ import { User } from "../models/User";
 import { asyncHandler } from "../middleware/errorHandler";
 import { requireMongoUser } from "../middleware/attachMongoUser";
 import { getFriendIds } from "../services/friendshipService";
-import { photoUrlFor } from "../services/spacesService";
+import { photoDataUri } from "../utils/photo";
 
 export const feedRouter = Router();
 feedRouter.use(requireMongoUser);
@@ -39,7 +39,7 @@ feedRouter.get(
     return res.status(200).json({
       entries: entries.map((entry) => ({
         ...entry.toObject(),
-        photoUrl: photoUrlFor(entry.photoKey),
+        photoUrl: photoDataUri(entry),
         author: authorById.get(entry.userId.toString()) ?? null,
       })),
       nextCursor,
@@ -71,7 +71,7 @@ feedRouter.get(
         taskTitle: duo.taskTitle,
         streak: duo.streak,
         names: [userA?.displayName ?? null, userB?.displayName ?? null],
-        photos: [entryA ? photoUrlFor(entryA.photoKey) : null, entryB ? photoUrlFor(entryB.photoKey) : null],
+        photos: [entryA ? photoDataUri(entryA) : null, entryB ? photoDataUri(entryB) : null],
         caption: entryB?.caption || entryA?.caption || "",
       },
     });

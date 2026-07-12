@@ -12,13 +12,6 @@ vi.mock("../src/config/firebase", () => ({
   },
 }));
 
-vi.mock("../src/services/spacesService", () => ({
-  isAllowedImageContentType: () => true,
-  createPresignedUploadUrl: vi.fn(),
-  objectExists: vi.fn(async () => true),
-  photoUrlFor: (key: string) => `https://cdn.example.com/${key}`,
-}));
-
 const { createApp } = await import("../src/app");
 const { User } = await import("../src/models/User");
 const { Goal } = await import("../src/models/Goal");
@@ -53,6 +46,7 @@ async function befriend(a: string, b: string) {
 }
 
 const auth = (token: string) => ["Authorization", `Bearer ${token}`] as const;
+const photoFields = { photoData: Buffer.from("fake-image-bytes").toString("base64"), photoContentType: "image/jpeg" };
 
 describe("GET /api/v1/leaderboard/friends", () => {
   it("ranks the caller and friends by points, excluding strangers", async () => {
@@ -89,7 +83,7 @@ describe("pins", () => {
     const entryRes = await request(app)
       .post("/api/v1/entries")
       .set(...auth("alice"))
-      .send({ goalId: goal.id, photoKey: `entries/${alice.id}/photo.jpg`, localDate: "2026-07-13" });
+      .send({ goalId: goal.id, ...photoFields, localDate: "2026-07-13" });
 
     expect(entryRes.body.newlyEarnedPins).toContain("first_stamp");
 
@@ -117,7 +111,7 @@ describe("pins", () => {
       const res = await request(app)
         .post("/api/v1/entries")
         .set(...auth("alice"))
-        .send({ goalId: goal.id, photoKey: `entries/${alice.id}/${localDate}.jpg`, localDate });
+        .send({ goalId: goal.id, ...photoFields, localDate });
       results.push(res.body.newlyEarnedPins);
     }
 

@@ -6,6 +6,15 @@ import { fonts, textStyles } from '@/theme/typography';
 import { Screen } from '@/components/Screen';
 import { useCompleteGoal } from '@/api/hooks/entries';
 import { ApiError } from '@/api/client';
+import { SproutCelebration } from '@/components/SproutCelebration';
+
+const CELEBRATIONS = [
+  { emoji: '🌱', msg: 'sprouted.' },
+  { emoji: '🌿', msg: 'new growth, right there.' },
+  { emoji: '🍃', msg: 'well tended.' },
+  { emoji: '🌼', msg: 'look at that bloom.' },
+  { emoji: '🌾', msg: 'rooted for today.' },
+];
 
 export default function CompleteStampScreen({ route, navigation }: any) {
   const goalId = route?.params?.goalId as string | undefined;
@@ -16,21 +25,43 @@ export default function CompleteStampScreen({ route, navigation }: any) {
   const [contentType, setContentType] = useState<'image/jpeg' | 'image/png'>('image/jpeg');
   const [caption, setCaption] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [celebration, setCelebration] = useState<string | null>(null);
+  const [celebration, setCelebration] = useState<{ emoji: string; msg: string; streak: number } | null>(null);
 
   if (!goalId) return null;
 
-  async function pickPhoto() {
+  function applyPickerResult(result: ImagePicker.ImagePickerResult) {
+    if (!result.canceled) {
+      setPhotoUri(result.assets[0].uri);
+      setContentType(result.assets[0].mimeType === 'image/png' ? 'image/png' : 'image/jpeg');
+    }
+  }
+
+  async function takePhoto() {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
       Alert.alert('Camera access needed', 'Enable camera access to stamp this task with a photo.');
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true });
-    if (!result.canceled) {
-      setPhotoUri(result.assets[0].uri);
-      setContentType(result.assets[0].mimeType === 'image/png' ? 'image/png' : 'image/jpeg');
+    applyPickerResult(await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true }));
+  }
+
+  async function chooseFromLibrary() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Photo access needed', 'Enable photo library access to upload an image.');
+      return;
     }
+    applyPickerResult(
+      await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, allowsEditing: true })
+    );
+  }
+
+  function pickPhoto() {
+    Alert.alert('Add a photo', undefined, [
+      { text: 'Take Photo', onPress: takePhoto },
+      { text: 'Choose from Library', onPress: chooseFromLibrary },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   }
 
   function stampIt() {
@@ -39,9 +70,10 @@ export default function CompleteStampScreen({ route, navigation }: any) {
     completeGoal.mutate(
       { goalId: goalId!, photoUri, contentType, caption },
       {
-        onSuccess: () => {
-          setCelebration('sprouted.');
-          setTimeout(() => navigation?.goBack(), 1500);
+        onSuccess: (data) => {
+          const pick = CELEBRATIONS[Math.floor(Math.random() * CELEBRATIONS.length)];
+          setCelebration({ ...pick, streak: data.user.currentStreak });
+          setTimeout(() => navigation?.goBack(), 1650);
         },
         onError: (err) => {
           setErrorMessage(
@@ -57,10 +89,11 @@ export default function CompleteStampScreen({ route, navigation }: any) {
   if (celebration) {
     return (
       <Screen scroll={false}>
-        <View style={styles.celebrate}>
-          <Text style={styles.celebrateEmoji}>🌱</Text>
-          <Text style={styles.celebrateMsg}>{celebration}</Text>
-        </View>
+        <SproutCelebration
+          emoji={celebration.emoji}
+          message={celebration.msg}
+          streakLine={`${celebration.streak} day streak`}
+        />
       </Screen>
     );
   }
@@ -79,7 +112,7 @@ export default function CompleteStampScreen({ route, navigation }: any) {
         ) : (
           <>
             <Text style={{ fontSize: 38 }}>📷</Text>
-            <Text style={styles.viewfinderHint}>tap to open camera</Text>
+            <Text style={styles.viewfinderHint}>tap to add a photo</Text>
           </>
         )}
       </Pressable>
@@ -145,8 +178,4 @@ const styles = StyleSheet.create({
   },
   stampBtnDisabled: { opacity: 0.35 },
   stampBtnText: { fontFamily: fonts.monoBold, fontSize: 12, color: colors.stamp, letterSpacing: 1 },
-
-  celebrate: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  celebrateEmoji: { fontSize: 48 },
-  celebrateMsg: { ...textStyles.appLogo, fontSize: 18, color: colors.ink, marginTop: 13, marginBottom: 4, textAlign: 'center' },
 });

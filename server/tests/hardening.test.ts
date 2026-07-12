@@ -58,9 +58,10 @@ describe("index verification", () => {
   it("enforces the unique {userId, goalId, localDate} index on entries (no double-stamping)", async () => {
     const user = await User.create({ firebaseUid: "alice", username: "alice", displayName: "alice", emailHash: "h" });
     const goalId = new (await import("mongoose")).Types.ObjectId();
-    await Entry.create({ userId: user._id, goalId, taskTitle: "x", photoKey: "k1", localDate: "2026-07-13" });
+    const photo = { photoData: "aGVsbG8=", photoContentType: "image/jpeg" };
+    await Entry.create({ userId: user._id, goalId, taskTitle: "x", ...photo, localDate: "2026-07-13" });
     await expect(
-      Entry.create({ userId: user._id, goalId, taskTitle: "x", photoKey: "k2", localDate: "2026-07-13" })
+      Entry.create({ userId: user._id, goalId, taskTitle: "x", ...photo, localDate: "2026-07-13" })
     ).rejects.toThrow();
   });
 

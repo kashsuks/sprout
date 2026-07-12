@@ -59,7 +59,8 @@ describe("goals", () => {
       userId: (await User.findOne({ firebaseUid: "alice" }))!._id,
       goalId,
       taskTitle: "stretch",
-      photoKey: "entries/alice/test.jpg",
+      photoData: "aGVsbG8=",
+      photoContentType: "image/jpeg",
       localDate: "2026-07-13",
     });
 
@@ -114,7 +115,8 @@ describe("goals", () => {
       userId: (await User.findOne({ firebaseUid: "alice" }))!._id,
       goalId,
       taskTitle: "read a book",
-      photoKey: "entries/alice/test.jpg",
+      photoData: "aGVsbG8=",
+      photoContentType: "image/jpeg",
       localDate: "2026-07-10", // completed on an earlier day
     });
 

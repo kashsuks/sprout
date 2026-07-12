@@ -5,7 +5,7 @@ import { Entry } from "../models/Entry";
 import { asyncHandler, HttpError } from "../middleware/errorHandler";
 import { requireMongoUser } from "../middleware/attachMongoUser";
 import { areFriends } from "../services/friendshipService";
-import { photoUrlFor } from "../services/spacesService";
+import { photoDataUri } from "../utils/photo";
 import { Types } from "mongoose";
 import { PINS_CATALOG } from "../data/pinsCatalog";
 import { UserPin } from "../models/UserPin";
@@ -61,7 +61,7 @@ usersRouter.get(
     const nextCursor = entries.length === limit ? entries[entries.length - 1]!._id : null;
 
     return res.status(200).json({
-      entries: entries.map((entry) => ({ ...entry.toObject(), photoUrl: photoUrlFor(entry.photoKey) })),
+      entries: entries.map((entry) => ({ ...entry.toObject(), photoUrl: photoDataUri(entry) })),
       nextCursor,
     });
   })

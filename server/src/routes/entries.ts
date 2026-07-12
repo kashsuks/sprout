@@ -7,12 +7,7 @@ import { evaluateDuoStreakOnEntry } from "../services/duoStreakService";
 import { asyncHandler, HttpError } from "../middleware/errorHandler";
 import { requireMongoUser } from "../middleware/attachMongoUser";
 import { isValidLocalDate } from "../utils/date";
-import {
-  createPresignedUploadUrl,
-  isAllowedImageContentType,
-  objectExists,
-  photoUrlFor,
-} from "../services/spacesService";
+import { isAllowedImageContentType, MAX_PHOTO_BYTES, photoDataUri } from "../utils/photo";
 import { awardEntryRewards, POINTS_PER_ENTRY } from "../services/pointsService";
 import { applyStreakUpdate } from "../services/streakService";
 import { evaluateAndAwardPins } from "../services/pinsService";
@@ -22,34 +17,20 @@ import { CURRENCY_PER_ENTRY } from "../services/pointsService";
 export const entriesRouter = Router();
 entriesRouter.use(requireMongoUser);
 
-const uploadUrlSchema = z.object({ contentType: z.string() });
-
-// POST /api/v1/entries/upload-url
-entriesRouter.post(
-  "/upload-url",
-  asyncHandler(async (req, res) => {
-    const { contentType } = uploadUrlSchema.parse(req.body);
-    if (!isAllowedImageContentType(contentType)) {
-      throw new HttpError(400, "contentType must be image/jpeg or image/png");
-    }
-    const result = await createPresignedUploadUrl(req.user!.id, contentType);
-    return res.status(200).json(result);
-  })
-);
-
 const createEntrySchema = z.object({
   goalId: z.string().min(1),
-  photoKey: z.string().min(1),
+  photoData: z.string().min(1),
+  photoContentType: z.string().refine(isAllowedImageContentType, "photoContentType must be image/jpeg or image/png"),
   caption: z.string().max(280).optional().default(""),
   stickerEmoji: z.string().max(8).nullable().optional(),
   localDate: z.string().refine(isValidLocalDate, "localDate must be YYYY-MM-DD"),
 });
 
 // POST /api/v1/entries
-// Completes a goal for the day: verifies the photo was actually uploaded,
-// creates the entry, awards points/currency, updates the streak, and (if
-// the goal is a "once" goal) deactivates it. Returns updated stats inline so
-// the client's completion screen can show them without a second round-trip.
+// Completes a goal for the day: creates the entry (photo stored inline as
+// base64 in Mongo), awards points/currency, updates the streak, and (if the
+// goal is a "once" goal) deactivates it. Returns updated stats inline so the
+// client's completion screen can show them without a second round-trip.
 entriesRouter.post(
   "/",
   asyncHandler(async (req, res) => {
@@ -58,12 +39,10 @@ entriesRouter.post(
     const goal = await Goal.findOne({ _id: body.goalId, userId: req.user!._id });
     if (!goal) throw new HttpError(404, "Goal not found");
 
-    if (!body.photoKey.startsWith(`entries/${req.user!.id}/`)) {
-      throw new HttpError(403, "photoKey does not belong to the current user");
+    const decodedSize = Math.ceil((body.photoData.length * 3) / 4);
+    if (decodedSize > MAX_PHOTO_BYTES) {
+      throw new HttpError(400, `Photo is too large (max ${Math.floor(MAX_PHOTO_BYTES / 1024 / 1024)}MB)`);
     }
-
-    const uploaded = await objectExists(body.photoKey);
-    if (!uploaded) throw new HttpError(400, "photoKey has not been uploaded to Spaces yet");
 
     let entry;
     try {
@@ -73,7 +52,8 @@ entriesRouter.post(
         taskTitle: goal.title,
         caption: body.caption,
         stickerEmoji: body.stickerEmoji ?? null,
-        photoKey: body.photoKey,
+        photoData: body.photoData,
+        photoContentType: body.photoContentType,
         pointsAwarded: POINTS_PER_ENTRY,
         localDate: body.localDate,
         duoId: goal.duoId ?? null,
@@ -105,7 +85,7 @@ entriesRouter.post(
     const newlyEarnedPins = await evaluateAndAwardPins(req.user!);
 
     return res.status(201).json({
-      entry: { ...entry.toObject(), photoUrl: photoUrlFor(entry.photoKey) },
+      entry: { ...entry.toObject(), photoUrl: photoDataUri(entry) },
       user: {
         points: req.user!.points,
         currency: req.user!.currency,
@@ -122,7 +102,7 @@ entriesRouter.get(
   asyncHandler(async (req, res) => {
     const entry = await Entry.findById(req.params.id);
     if (!entry) throw new HttpError(404, "Entry not found");
-    return res.status(200).json({ entry: { ...entry.toObject(), photoUrl: photoUrlFor(entry.photoKey) } });
+    return res.status(200).json({ entry: { ...entry.toObject(), photoUrl: photoDataUri(entry) } });
   })
 );
 

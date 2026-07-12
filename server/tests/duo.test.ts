@@ -12,13 +12,6 @@ vi.mock("../src/config/firebase", () => ({
   },
 }));
 
-vi.mock("../src/services/spacesService", () => ({
-  isAllowedImageContentType: () => true,
-  createPresignedUploadUrl: vi.fn(),
-  objectExists: vi.fn(async () => true),
-  photoUrlFor: (key: string) => `https://cdn.example.com/${key}`,
-}));
-
 const { createApp } = await import("../src/app");
 const { User } = await import("../src/models/User");
 const { Goal } = await import("../src/models/Goal");
@@ -49,11 +42,16 @@ async function befriend(a: string, b: string) {
 
 const auth = (token: string) => ["Authorization", `Bearer ${token}`] as const;
 
-async function stamp(app: ReturnType<typeof createApp>, token: string, goalId: string, localDate: string, userId: string) {
+async function stamp(app: ReturnType<typeof createApp>, token: string, goalId: string, localDate: string) {
   return request(app)
     .post("/api/v1/entries")
     .set(...auth(token))
-    .send({ goalId, photoKey: `entries/${userId}/${localDate}.jpg`, localDate });
+    .send({
+      goalId,
+      photoData: Buffer.from("fake-image-bytes").toString("base64"),
+      photoContentType: "image/jpeg",
+      localDate,
+    });
 }
 
 describe("duo linking", () => {
@@ -170,11 +168,11 @@ describe("duo shared streak", () => {
       .send({ friendUserId: bob.id, taskTitle: "gym", myGoalId: aliceGoal.id });
     const bobGoal = await Goal.findOne({ userId: bob._id, title: "gym" });
 
-    await stamp(app, "alice", aliceGoal.id, "2026-07-10", alice.id);
+    await stamp(app, "alice", aliceGoal.id, "2026-07-10");
     let duo = await Duo.findById(linkRes.body.duo._id);
     expect(duo!.streak).toBe(0); // bob hasn't completed yet
 
-    await stamp(app, "bob", bobGoal!.id, "2026-07-10", bob.id);
+    await stamp(app, "bob", bobGoal!.id, "2026-07-10");
     duo = await Duo.findById(linkRes.body.duo._id);
     expect(duo!.streak).toBe(1);
   });
@@ -198,15 +196,15 @@ describe("duo shared streak", () => {
     const bobGoal = await Goal.findOne({ userId: bob._id, title: "gym" });
 
     for (const date of ["2026-07-10", "2026-07-11"]) {
-      await stamp(app, "alice", aliceGoal.id, date, alice.id);
-      await stamp(app, "bob", bobGoal!.id, date, bob.id);
+      await stamp(app, "alice", aliceGoal.id, date);
+      await stamp(app, "bob", bobGoal!.id, date);
     }
     let duo = await Duo.findById(linkRes.body.duo._id);
     expect(duo!.streak).toBe(2);
 
     // bob misses 2026-07-12 entirely; both complete again on 2026-07-14 (gap > 1)
-    await stamp(app, "alice", aliceGoal.id, "2026-07-14", alice.id);
-    await stamp(app, "bob", bobGoal!.id, "2026-07-14", bob.id);
+    await stamp(app, "alice", aliceGoal.id, "2026-07-14");
+    await stamp(app, "bob", bobGoal!.id, "2026-07-14");
     duo = await Duo.findById(linkRes.body.duo._id);
     expect(duo!.streak).toBe(1);
   });

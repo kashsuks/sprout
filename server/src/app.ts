@@ -19,7 +19,9 @@ import { usersRouter } from "./routes/users";
 export function createApp(): Express {
   const app = express();
 
-  app.use(express.json());
+  // Photos are uploaded inline as base64 JSON (see routes/entries.ts), which
+  // inflates ~33% over the raw bytes — 12mb comfortably covers MAX_PHOTO_BYTES.
+  app.use(express.json({ limit: "12mb" }));
   app.use(
     cors({
       origin: corsAllowedOrigins.length > 0 ? corsAllowedOrigins : false,
