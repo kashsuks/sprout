@@ -20,9 +20,11 @@ export type MongoUser = {
   currency: number;
   currentStreak: number;
   friendsOnlyProfile: boolean;
+  contentPreferences: string[];
+  hasSetPreferences: boolean;
 };
 
-type AuthStatus = 'loading' | 'signedOut' | 'needsBootstrap' | 'ready';
+type AuthStatus = 'loading' | 'signedOut' | 'needsBootstrap' | 'needsPreferences' | 'ready';
 
 type AuthState = {
   status: AuthStatus;
@@ -46,6 +48,12 @@ async function loadMe(): Promise<MongoUser | null> {
     if (err instanceof ApiError && err.status === 404) return null;
     throw err;
   }
+}
+
+function statusFor(mongoUser: MongoUser | null): AuthStatus {
+  if (!mongoUser) return 'needsBootstrap';
+  if (!mongoUser.hasSetPreferences) return 'needsPreferences';
+  return 'ready';
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -85,7 +93,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await apiFetch('/auth/bootstrap', { method: 'POST', body: { username, displayName, bio } });
       const mongoUser = await loadMe();
-      set({ mongoUser, status: mongoUser ? 'ready' : 'needsBootstrap' });
+      set({ mongoUser, status: statusFor(mongoUser) });
     } catch (err) {
       set({ error: err instanceof ApiError ? err.message : 'Could not finish sign up' });
       throw err;
@@ -94,7 +102,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   refreshMe: async () => {
     const mongoUser = await loadMe();
-    set({ mongoUser, status: mongoUser ? 'ready' : 'needsBootstrap' });
+    set({ mongoUser, status: statusFor(mongoUser) });
   },
 
   clearError: () => set({ error: null }),
@@ -109,7 +117,7 @@ onAuthStateChanged(auth, async (firebaseUser) => {
   useAuthStore.setState({ firebaseUser, status: 'loading' });
   try {
     const mongoUser = await loadMe();
-    useAuthStore.setState({ mongoUser, status: mongoUser ? 'ready' : 'needsBootstrap' });
+    useAuthStore.setState({ mongoUser, status: statusFor(mongoUser) });
   } catch (err) {
     useAuthStore.setState({
       status: 'signedOut',

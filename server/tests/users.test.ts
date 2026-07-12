@@ -65,6 +65,36 @@ describe("PATCH /api/v1/users/me", () => {
   });
 });
 
+describe("PATCH /api/v1/users/me/preferences", () => {
+  it("saves the chosen tags and marks hasSetPreferences", async () => {
+    await createUser("alice");
+    const app = createApp();
+
+    const res = await request(app)
+      .patch("/api/v1/users/me/preferences")
+      .set("Authorization", "Bearer alice")
+      .send({ contentPreferences: ["fitness", "mindfulness"] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.contentPreferences).toEqual(["fitness", "mindfulness"]);
+    expect(res.body.user.hasSetPreferences).toBe(true);
+  });
+
+  it("allows an empty selection (skip), still marking hasSetPreferences", async () => {
+    await createUser("alice");
+    const app = createApp();
+
+    const res = await request(app)
+      .patch("/api/v1/users/me/preferences")
+      .set("Authorization", "Bearer alice")
+      .send({ contentPreferences: [] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.contentPreferences).toEqual([]);
+    expect(res.body.user.hasSetPreferences).toBe(true);
+  });
+});
+
 describe("GET /api/v1/users/:id", () => {
   it("returns the full profile for a friend", async () => {
     const alice = await createUser("alice");

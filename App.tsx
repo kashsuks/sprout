@@ -8,6 +8,7 @@ import { colors } from '@/theme/colors';
 import RootNavigator from '@/navigation/RootNavigator';
 import AuthNavigator from '@/navigation/AuthNavigator';
 import OnboardingScreen from '@/screens/auth/OnboardingScreen';
+import PreferencesScreen from '@/screens/auth/PreferencesScreen';
 import { useAuthStore } from '@/store/useAuthStore';
 
 const queryClient = new QueryClient();
@@ -27,6 +28,10 @@ function Gate() {
 
   if (status === 'needsBootstrap') {
     return <OnboardingScreen />;
+  }
+
+  if (status === 'needsPreferences') {
+    return <PreferencesScreen />;
   }
 
   return <RootNavigator />;

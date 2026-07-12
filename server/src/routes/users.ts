@@ -41,6 +41,27 @@ usersRouter.patch(
   })
 );
 
+const patchPreferencesSchema = z.object({
+  contentPreferences: z.array(z.string().trim().min(1).max(40)).max(20),
+});
+
+// PATCH /api/v1/users/me/preferences
+// Called once from the post-signup preferences modal (an empty array just
+// means the user skipped it — hasSetPreferences is what tells the client
+// not to show the modal again). Raw tags only; a separate job turns these
+// into a vector embedding for Atlas Vector Search elsewhere.
+usersRouter.patch(
+  "/me/preferences",
+  requireMongoUser,
+  asyncHandler(async (req, res) => {
+    const { contentPreferences } = patchPreferencesSchema.parse(req.body);
+    req.user!.contentPreferences = contentPreferences;
+    req.user!.hasSetPreferences = true;
+    await req.user!.save();
+    return res.status(200).json({ user: req.user });
+  })
+);
+
 // GET /api/v1/users/me/scrapbook?cursor=&limit=
 // Just a query over the caller's own entries — no separate collection.
 // Cursor pagination on _id (roughly time-ordered and unique), not

@@ -43,3 +43,15 @@ export function useUpdatePrivacy() {
     },
   });
 }
+
+export function useSavePreferences() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (contentPreferences: string[]) =>
+      apiFetch<{ user: MongoUser }>('/users/me/preferences', { method: 'PATCH', body: { contentPreferences } }),
+    onSuccess: (data) => {
+      useAuthStore.setState({ mongoUser: data.user, status: 'ready' });
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+    },
+  });
+}

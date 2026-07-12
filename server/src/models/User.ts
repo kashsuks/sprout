@@ -15,6 +15,14 @@ const userSchema = new Schema(
 
     friendsOnlyProfile: { type: Boolean, default: true },
 
+    // Chosen once in the post-signup preferences modal. Raw tags for now —
+    // a separate embedding pipeline turns these into a vector (stored in
+    // its own field/index by that job) for Atlas Vector Search-based content
+    // recommendations. hasSetPreferences distinguishes "answered with zero
+    // picks" from "never saw the modal", so it's only ever set server-side.
+    contentPreferences: { type: [String], default: [] },
+    hasSetPreferences: { type: Boolean, default: false },
+
     // sha256/HMAC hashes of the user's own normalized phone/email, used to
     // match against other users' device contacts. Never store raw contact data.
     contactHash: { type: String, default: null, index: true },
