@@ -38,12 +38,15 @@ export default function FeedScreen({ navigation }: any) {
               {duo.names[0] ?? '?'} &amp; {duo.names[1] ?? '?'} · {duo.taskTitle}
             </Text>
             <View style={styles.duoPhotos}>
-              {duo.photos.map((photo, i) =>
-                photo ? (
-                  <Image key={i} source={{ uri: photo }} style={styles.duoPhoto} resizeMode="cover" />
-                ) : (
-                  <View key={i} style={[styles.duoPhoto, styles.duoPhotoEmpty]} />
-                )
+              {duo.photos[0] ? (
+                <Image source={{ uri: duo.photos[0] }} style={[styles.duoPhoto, styles.duoPhotoA]} resizeMode="cover" />
+              ) : (
+                <View style={[styles.duoPhoto, styles.duoPhotoA, styles.duoPhotoEmpty]} />
+              )}
+              {duo.photos[1] ? (
+                <Image source={{ uri: duo.photos[1] }} style={[styles.duoPhoto, styles.duoPhotoB]} resizeMode="cover" />
+              ) : (
+                <View style={[styles.duoPhoto, styles.duoPhotoB, styles.duoPhotoEmpty]} />
               )}
             </View>
             {duo.caption ? <Text style={styles.duoCaption}>{duo.caption}</Text> : null}
@@ -120,8 +123,22 @@ const styles = StyleSheet.create({
   streakChipText: { fontFamily: fonts.monoBold, fontSize: 11, color: colors.stamp },
 
   duoTitle: { fontFamily: fonts.monoBold, fontSize: 10, color: colors.ink, marginBottom: 8 },
-  duoPhotos: { flexDirection: 'row', gap: 3, marginBottom: 7 },
-  duoPhoto: { flex: 1, aspectRatio: 1, borderRadius: 4 },
+  duoPhotos: { height: 100, marginBottom: 14 },
+  duoPhoto: {
+    position: 'absolute',
+    width: 72,
+    height: 72,
+    borderRadius: 6,
+    borderWidth: 3,
+    borderColor: colors.card,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  duoPhotoA: { left: 6, top: 6, transform: [{ rotate: '-7deg' }], zIndex: 1 },
+  duoPhotoB: { left: 66, top: 0, transform: [{ rotate: '5deg' }], zIndex: 2 },
   duoPhotoEmpty: { backgroundColor: colors.forestBg },
   duoCaption: { ...textStyles.caption, color: colors.ink, marginBottom: 5 },
   duoMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

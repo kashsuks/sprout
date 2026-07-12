@@ -11,13 +11,6 @@ const envSchema = z.object({
   FIREBASE_CLIENT_EMAIL: z.string().min(1, "FIREBASE_CLIENT_EMAIL is required"),
   FIREBASE_PRIVATE_KEY: z.string().min(1, "FIREBASE_PRIVATE_KEY is required"),
 
-  DO_SPACES_ENDPOINT: z.string().optional(),
-  DO_SPACES_REGION: z.string().optional(),
-  DO_SPACES_BUCKET: z.string().optional(),
-  DO_SPACES_KEY: z.string().optional(),
-  DO_SPACES_SECRET: z.string().optional(),
-  DO_SPACES_CDN_BASE_URL: z.string().optional(),
-
   CONTACT_HASH_SALT: z.string().optional(),
 });
 

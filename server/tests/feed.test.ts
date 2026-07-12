@@ -12,13 +12,6 @@ vi.mock("../src/config/firebase", () => ({
   },
 }));
 
-vi.mock("../src/services/spacesService", () => ({
-  isAllowedImageContentType: () => true,
-  createPresignedUploadUrl: vi.fn(),
-  objectExists: vi.fn(async () => true),
-  photoUrlFor: (key: string) => `https://cdn.example.com/${key}`,
-}));
-
 const { createApp } = await import("../src/app");
 const { User } = await import("../src/models/User");
 const { Goal } = await import("../src/models/Goal");
@@ -59,7 +52,8 @@ async function postEntry(userId: string, localDate: string) {
     userId,
     goalId: goal._id,
     taskTitle: goal.title,
-    photoKey: `entries/${userId}/${localDate}.jpg`,
+    photoData: Buffer.from("fake-image-bytes").toString("base64"),
+    photoContentType: "image/jpeg",
     localDate,
     pointsAwarded: 15,
   });

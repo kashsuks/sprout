@@ -1,3 +1,4 @@
+import * as FileSystem from 'expo-file-system';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/api/client';
 
@@ -8,7 +9,6 @@ export type Entry = {
   taskTitle: string;
   caption: string;
   stickerEmoji: string | null;
-  photoKey: string;
   photoUrl: string;
   pointsAwarded: number;
   localDate: string;
@@ -27,26 +27,14 @@ function todayLocalDate(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// Orchestrates the full stamp flow: get a presigned upload URL, PUT the
-// photo bytes directly to storage, then create the entry. Any step failing
-// (most likely the upload-url request, since DigitalOcean Spaces isn't
-// configured in every environment) rejects with a message the UI can show.
+// Photos are stored inline in Mongo (base64), so completing a goal is a
+// single request: read the local photo file as base64 and post it straight
+// to /entries alongside the rest of the completion payload.
 export function useCompleteGoal() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: CompleteGoalInput) => {
-      const { uploadUrl, photoKey } = await apiFetch<{ uploadUrl: string; photoKey: string }>('/entries/upload-url', {
-        method: 'POST',
-        body: { contentType: input.contentType },
-      });
-
-      const photoBlob = await (await fetch(input.photoUri)).blob();
-      const putRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': input.contentType },
-        body: photoBlob,
-      });
-      if (!putRes.ok) throw new Error('Photo upload failed');
+      const photoData = await FileSystem.readAsStringAsync(input.photoUri, { encoding: FileSystem.EncodingType.Base64 });
 
       return apiFetch<{ entry: Entry; user: { points: number; currency: number; currentStreak: number }; newlyEarnedPins: string[] }>(
         '/entries',
@@ -54,7 +42,8 @@ export function useCompleteGoal() {
           method: 'POST',
           body: {
             goalId: input.goalId,
-            photoKey,
+            photoData,
+            photoContentType: input.contentType,
             caption: input.caption ?? '',
             stickerEmoji: input.stickerEmoji ?? null,
             localDate: todayLocalDate(),

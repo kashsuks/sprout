@@ -13,10 +13,10 @@ export function useUserProfile(id: string | null) {
   });
 }
 
-export function useScrapbook() {
+export function useScrapbook(limit = 12) {
   return useQuery({
-    queryKey: ['users', 'me', 'scrapbook'],
-    queryFn: () => apiFetch<{ entries: Entry[]; nextCursor: string | null }>('/users/me/scrapbook', { query: { limit: 12 } }),
+    queryKey: ['users', 'me', 'scrapbook', limit],
+    queryFn: () => apiFetch<{ entries: Entry[]; nextCursor: string | null }>('/users/me/scrapbook', { query: { limit } }),
   });
 }
 

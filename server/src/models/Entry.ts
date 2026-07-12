@@ -1,8 +1,9 @@
 import { Schema, model, type InferSchemaType } from "mongoose";
 
-// A completed-goal "stamp"/post. photoKey/upload wiring lands in Milestone 4;
-// the schema is defined in full now since Goals' "today" view already needs
-// to cross-reference entries to know which of today's goals are done.
+// A completed-goal "stamp"/post. Photos are stored inline in Mongo (base64)
+// rather than in object storage — simplest option for this project's scale,
+// no external storage account needed. See photoDataUri() in utils/photo.ts
+// for how photoData/photoContentType become a displayable URL at read time.
 const entrySchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
@@ -10,7 +11,8 @@ const entrySchema = new Schema(
     taskTitle: { type: String, required: true }, // denormalized snapshot of goal.title at completion time
     caption: { type: String, default: "", maxlength: 280 },
     stickerEmoji: { type: String, default: null },
-    photoKey: { type: String, required: true },
+    photoData: { type: String, required: true }, // base64-encoded image bytes
+    photoContentType: { type: String, required: true },
     pointsAwarded: { type: Number, required: true, default: 0 },
     completedAt: { type: Date, required: true, default: () => new Date() },
     // "YYYY-MM-DD" in the user's timezone at completion — drives same-day
