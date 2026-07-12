@@ -36,7 +36,7 @@ export default function RanksScreen() {
               <Text style={styles.avatarText}>{row.displayName[0]?.toUpperCase()}</Text>
             </View>
             <Text style={styles.name}>{row.me ? 'you' : row.displayName}</Text>
-            <Text style={styles.points}>{row.points}</Text>
+            <Text style={styles.points}>{row.points.toLocaleString()}</Text>
           </View>
         ))
       )}
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   },
   rankGold: { backgroundColor: colors.brassBg },
   rankPlain: { backgroundColor: colors.page, borderWidth: 1, borderColor: colors.line },
-  rankText: { fontFamily: fonts.monoBold, fontSize: 10, color: colors.inkSoft },
+  rankText: { fontFamily: fonts.monoBold, fontSize: 10, lineHeight: 13, color: colors.inkSoft, textAlign: 'center' },
   avatar: {
     width: 26,
     height: 26,
@@ -78,7 +78,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontFamily: fonts.display, fontSize: 11, color: colors.white },
-  name: { flex: 1, fontFamily: fonts.monoBold, fontSize: 11, color: colors.ink },
-  points: { fontFamily: fonts.monoBold, fontSize: 11, color: colors.forest },
+  avatarText: { fontFamily: fonts.display, fontSize: 11, lineHeight: 14, color: colors.white, textAlign: 'center' },
+  name: { flex: 1, fontFamily: fonts.monoBold, fontSize: 11, lineHeight: 14, color: colors.ink },
+  points: {
+    fontFamily: fonts.monoBold,
+    fontSize: 11,
+    lineHeight: 14,
+    color: colors.forest,
+    minWidth: 40,
+    textAlign: 'right',
+  },
 });

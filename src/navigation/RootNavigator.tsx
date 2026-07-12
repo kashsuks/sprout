@@ -76,7 +76,7 @@ export default function RootNavigator() {
             backgroundColor: colors.card,
             borderTopColor: colors.line,
             borderTopWidth: 1,
-            height: 50 + insets.bottom,
+            height: 58 + insets.bottom,
             paddingTop: 8,
             paddingBottom: insets.bottom,
           },
@@ -86,27 +86,27 @@ export default function RootNavigator() {
         <Tab.Screen
           name="Feed"
           component={FeedStackNavigator}
-          options={{ tabBarIcon: ({ focused }) => <FeedIcon active={focused} /> }}
+          options={{ tabBarIcon: ({ focused }) => <FeedIcon active={focused} size={26} /> }}
         />
         <Tab.Screen
           name="Ranks"
           component={RanksScreen}
-          options={{ tabBarIcon: ({ focused }) => <LeaderboardIcon active={focused} /> }}
+          options={{ tabBarIcon: ({ focused }) => <LeaderboardIcon active={focused} size={26} /> }}
         />
         <Tab.Screen
           name="Tasks"
           component={TasksStackNavigator}
-          options={{ tabBarIcon: ({ focused }) => <NewEntryIcon active={focused} /> }}
+          options={{ tabBarIcon: ({ focused }) => <NewEntryIcon active={focused} size={26} /> }}
         />
         <Tab.Screen
           name="SquadTab"
           component={SquadStackNavigator}
-          options={{ tabBarIcon: ({ focused }) => <SquadIcon active={focused} /> }}
+          options={{ tabBarIcon: ({ focused }) => <SquadIcon active={focused} size={26} /> }}
         />
         <Tab.Screen
           name="Profile"
           component={ProfileStackNavigator}
-          options={{ tabBarIcon: ({ focused }) => <ProfileIcon active={focused} /> }}
+          options={{ tabBarIcon: ({ focused }) => <ProfileIcon active={focused} size={26} /> }}
         />
       </Tab.Navigator>
     </NavigationContainer>
