@@ -151,7 +151,6 @@ export default function FeedScreen({ navigation }: any) {
                   <Pressable
                     style={styles.likeRow}
                     hitSlop={8}
-                    disabled={source === 'discover'}
                     onPress={() => toggleLike.mutate({ entryId: entry._id, like: !entry.likedByMe })}
                   >
                     <HeartIcon size={19} filled={entry.likedByMe} />

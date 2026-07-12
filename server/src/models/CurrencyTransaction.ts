@@ -7,9 +7,8 @@ const currencyTransactionSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     delta: { type: Number, required: true },
-    reason: { type: String, enum: ["entry_completed", "marketplace_purchase", "admin_adjustment"], required: true },
+    reason: { type: String, enum: ["entry_completed", "admin_adjustment"], required: true },
     relatedEntryId: { type: Schema.Types.ObjectId, ref: "Entry", default: null },
-    relatedItemId: { type: Schema.Types.ObjectId, ref: "MarketplaceItem", default: null },
     balanceAfter: { type: Number, required: true },
   },
   { timestamps: true }

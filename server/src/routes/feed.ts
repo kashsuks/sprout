@@ -99,8 +99,9 @@ feedRouter.get(
 );
 
 // Shared guard for the like/unlike endpoints: the entry must exist and must
-// belong to the caller or one of their accepted friends — otherwise someone
-// could like an arbitrary entry they were never shown in their own feed.
+// belong to the caller, one of their accepted friends, or a public (non
+// friends-only) profile — the same visibility rule the discover feed uses —
+// otherwise someone could like an arbitrary entry they were never shown.
 async function findLikeableEntry(req: import("express").Request) {
   const { entryId } = req.params;
   if (!Types.ObjectId.isValid(entryId)) throw new HttpError(400, "Invalid entry id");
@@ -110,8 +111,12 @@ async function findLikeableEntry(req: import("express").Request) {
 
   if (entry.userId.toString() !== req.user!.id) {
     const friendIds = await getFriendIds(req.user!.id);
-    if (!friendIds.some((id) => id.toString() === entry.userId.toString())) {
-      throw new HttpError(404, "Entry not found");
+    const isFriend = friendIds.some((id) => id.toString() === entry.userId.toString());
+    if (!isFriend) {
+      const author = await User.findById(entry.userId).select("friendsOnlyProfile");
+      if (!author || author.friendsOnlyProfile) {
+        throw new HttpError(404, "Entry not found");
+      }
     }
   }
   return entry;

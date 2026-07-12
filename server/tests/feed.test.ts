@@ -160,3 +160,62 @@ describe("GET /api/v1/feed", () => {
     expect(page2.body.nextCursor).toBeNull();
   });
 });
+
+describe("POST/DELETE /api/v1/feed/:entryId/like", () => {
+  it("lets a user like their own entry", async () => {
+    const alice = await createUser("alice");
+    const entry = await postEntry(alice.id, "2026-07-10");
+    const app = createApp();
+
+    const res = await request(app)
+      .post(`/api/v1/feed/${entry.id}/like`)
+      .set(...auth("alice"));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ likeCount: 1, likedByMe: true });
+  });
+
+  it("lets a friend like an entry, and unlike reverses it", async () => {
+    const alice = await createUser("alice");
+    const bob = await createUser("bob");
+    await befriend(alice.id, bob.id);
+    const entry = await postEntry(bob.id, "2026-07-10");
+    const app = createApp();
+
+    const like = await request(app)
+      .post(`/api/v1/feed/${entry.id}/like`)
+      .set(...auth("alice"));
+    expect(like.status).toBe(200);
+    expect(like.body).toEqual({ likeCount: 1, likedByMe: true });
+
+    const unlike = await request(app)
+      .delete(`/api/v1/feed/${entry.id}/like`)
+      .set(...auth("alice"));
+    expect(unlike.status).toBe(200);
+    expect(unlike.body).toEqual({ likeCount: 0, likedByMe: false });
+  });
+
+  it("lets a non-friend like an entry from a public (non friends-only) profile — discover feed content", async () => {
+    const alice = await createUser("alice");
+    const bob = await createUser("bob", { friendsOnlyProfile: false });
+    const entry = await postEntry(bob.id, "2026-07-10");
+    const app = createApp();
+
+    const res = await request(app)
+      .post(`/api/v1/feed/${entry.id}/like`)
+      .set(...auth("alice"));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ likeCount: 1, likedByMe: true });
+  });
+
+  it("404s liking a non-friend's entry when their profile is friends-only", async () => {
+    const alice = await createUser("alice");
+    const bob = await createUser("bob", { friendsOnlyProfile: true });
+    const entry = await postEntry(bob.id, "2026-07-10");
+    const app = createApp();
+
+    const res = await request(app)
+      .post(`/api/v1/feed/${entry.id}/like`)
+      .set(...auth("alice"));
+    expect(res.status).toBe(404);
+  });
+});

@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 
-// A (single-member) replica set, not a standalone instance, because the
-// marketplace purchase flow uses a multi-document Mongo transaction, which
-// standalone MongoDB doesn't support.
+// A (single-member) replica set, not a standalone instance, since Mongo
+// multi-document transactions require one — kept in case a future flow
+// needs them again.
 let replSet: MongoMemoryReplSet | undefined;
 
 export async function connectTestDb(): Promise<void> {

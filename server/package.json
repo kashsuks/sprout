@@ -10,7 +10,6 @@
     "start": "node --env-file=.env dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "seed:marketplace": "tsx --env-file=.env src/scripts/seedMarketplace.ts",
     "setup:vector-index": "tsx --env-file=.env src/scripts/setupVectorIndex.ts"
   },
   "dependencies": {

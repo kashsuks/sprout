@@ -1,3 +1,4 @@
+import type { Types } from "mongoose";
 import { Entry } from "../models/Entry";
 import { User } from "../models/User";
 import { getFriendIds } from "./friendshipService";
@@ -39,16 +40,16 @@ export async function getDiscoverEntries(userId: string, limit: number) {
         (await Entry.findOne({ userId: goal.userId }).sort({ _id: -1 }));
       if (!entry) return null;
       // Same response shape as the friends-feed path (routes/feed.ts) minus
-      // the raw likedBy array — discover entries are from non-friends, and
-      // the like endpoints only permit liking your own or a friend's entry,
-      // so likedByMe is always false here (the client renders likes read-only).
+      // the raw likedBy array. Discover entries are only ever surfaced from
+      // public (non friends-only) profiles, which routes/feed.ts's like
+      // guard also permits liking, so likedByMe reflects real state here too.
       const { likedBy, ...rest } = entry.toObject();
       return {
         ...rest,
         photoUrl: photoDataUri(entry),
         author: authorById.get(goal.userId) ?? null,
         likeCount: likedBy?.length ?? 0,
-        likedByMe: false,
+        likedByMe: (likedBy ?? []).some((id: Types.ObjectId) => id.toString() === userId),
       };
     })
   );

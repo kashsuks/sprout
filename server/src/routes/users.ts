@@ -9,9 +9,6 @@ import { photoDataUri } from "../utils/photo";
 import { Types } from "mongoose";
 import { PINS_CATALOG } from "../data/pinsCatalog";
 import { UserPin } from "../models/UserPin";
-import { MarketplaceItem } from "../models/MarketplaceItem";
-import { UserInventory } from "../models/UserInventory";
-import { getEquippedFlair } from "../services/inventoryService";
 
 export const usersRouter = Router();
 
@@ -88,48 +85,9 @@ usersRouter.get(
   })
 );
 
-// GET /api/v1/users/me/inventory
-usersRouter.get(
-  "/me/inventory",
-  requireMongoUser,
-  asyncHandler(async (req, res) => {
-    const inventory = await UserInventory.find({ userId: req.user!._id }).populate("itemId");
-    return res.status(200).json({ inventory });
-  })
-);
-
-// POST /api/v1/users/me/inventory/:itemId/equip
-// Single active flair per category: unequips any other owned item in the
-// same category before equipping this one.
-usersRouter.post(
-  "/me/inventory/:itemId/equip",
-  requireMongoUser,
-  asyncHandler(async (req, res) => {
-    const owned = await UserInventory.findOne({ userId: req.user!._id, itemId: req.params.itemId });
-    if (!owned) throw new HttpError(404, "Item not owned");
-
-    const item = await MarketplaceItem.findById(req.params.itemId);
-    if (!item) throw new HttpError(404, "Item not found");
-
-    const sameCategoryItemIds = (await MarketplaceItem.find({ category: item.category }).select("_id")).map(
-      (i) => i._id
-    );
-    await UserInventory.updateMany(
-      { userId: req.user!._id, itemId: { $in: sameCategoryItemIds } },
-      { $set: { equipped: false } }
-    );
-    owned.equipped = true;
-    await owned.save();
-
-    return res.status(200).json({ inventory: owned });
-  })
-);
-
 // GET /api/v1/users/:id
 // Respects friendsOnlyProfile: non-friends viewing a friends-only profile
-// get a trimmed-down public view instead of the full document. Equipped
-// flair is always surfaced (even in the limited view) since it's cosmetic
-// and meant to be publicly visible on the profile.
+// get a trimmed-down public view instead of the full document.
 usersRouter.get(
   "/:id",
   requireMongoUser,
@@ -139,7 +97,6 @@ usersRouter.get(
 
     const isSelf = target.id === req.user!.id;
     const isFriend = isSelf ? true : await areFriends(req.user!.id, target.id);
-    const equippedFlair = await getEquippedFlair(target._id);
 
     if (!isSelf && target.friendsOnlyProfile && !isFriend) {
       return res.status(200).json({
@@ -148,13 +105,12 @@ usersRouter.get(
           username: target.username,
           displayName: target.displayName,
           avatarKey: target.avatarKey,
-          equippedFlair,
         },
         limited: true,
       });
     }
 
-    return res.status(200).json({ user: { ...target.toObject(), equippedFlair }, limited: false });
+    return res.status(200).json({ user: target.toObject(), limited: false });
   })
 );
 

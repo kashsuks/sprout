@@ -12,7 +12,6 @@ import { feedRouter } from "./routes/feed";
 import { friendsRouter } from "./routes/friends";
 import { goalsRouter } from "./routes/goals";
 import { leaderboardRouter } from "./routes/leaderboard";
-import { marketplaceRouter } from "./routes/marketplace";
 import { pinsRouter } from "./routes/pins";
 import { usersRouter } from "./routes/users";
 
@@ -50,7 +49,6 @@ export function createApp(): Express {
   app.use("/api/v1/duo", duoRouter);
   app.use("/api/v1/leaderboard", leaderboardRouter);
   app.use("/api/v1/pins", pinsRouter);
-  app.use("/api/v1/marketplace", marketplaceRouter);
 
   app.use(errorHandler);
 

@@ -5,8 +5,8 @@ import type { UserDoc } from "../models/User";
 export async function recordCurrencyDelta(
   user: HydratedDocument<UserDoc>,
   delta: number,
-  reason: "entry_completed" | "marketplace_purchase" | "admin_adjustment",
-  related: { relatedEntryId?: Types.ObjectId | string; relatedItemId?: Types.ObjectId | string } = {}
+  reason: "entry_completed" | "admin_adjustment",
+  related: { relatedEntryId?: Types.ObjectId | string } = {}
 ): Promise<void> {
   await CurrencyTransaction.create({
     userId: user._id,
