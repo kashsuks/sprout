@@ -15,10 +15,11 @@ export type FeedEntry = {
   author: FeedAuthor | null;
 };
 
-export function useFeed() {
+export function useFeed(options?: { refetchInterval?: number | false }) {
   return useQuery({
     queryKey: ['feed'],
     queryFn: () => apiFetch<{ entries: FeedEntry[]; nextCursor: string | null }>('/feed', { query: { limit: 20 } }),
+    refetchInterval: options?.refetchInterval,
   });
 }
 

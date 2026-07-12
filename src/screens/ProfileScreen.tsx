@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useScrapbook, useUpdatePrivacy } from '@/api/hooks/users';
 import { usePins } from '@/api/hooks/pins';
 import { ScrapbookContent } from '@/screens/ScrapbookScreen';
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 
 type Rect = { left: number; top: number; width: number; height: number };
 
@@ -27,11 +28,20 @@ export default function ProfileScreen({ navigation }: any) {
   const mongoUser = useAuthStore((s) => s.mongoUser);
   const signOutUser = useAuthStore((s) => s.signOutUser);
   const updatePrivacy = useUpdatePrivacy();
-  const { data: pinsData } = usePins();
-  const { data: scrapbookData, isLoading: scrapbookLoading } = useScrapbook(3);
+  const { data: pinsData, refetch: refetchPins } = usePins();
+  const { data: scrapbookData, isLoading: scrapbookLoading, refetch: refetchScrapbook } = useScrapbook(3);
 
   const earnedPins = (pinsData?.pins ?? []).filter((p) => p.earned);
   const scrapbook = scrapbookData?.entries ?? [];
+
+  useRefetchOnFocus(refetchPins);
+  useRefetchOnFocus(refetchScrapbook);
+  const [refreshing, setRefreshing] = useState(false);
+  async function onRefresh() {
+    setRefreshing(true);
+    await Promise.all([refetchPins(), refetchScrapbook()]);
+    setRefreshing(false);
+  }
 
   const filmstripRef = useRef<View>(null);
   const slotRefs = useRef<(View | null)[]>([null, null, null]);
@@ -181,7 +191,7 @@ export default function ProfileScreen({ navigation }: any) {
   barPhotosRef.current = barPhotos;
 
   return (
-    <Screen contentStyle={{ paddingTop: 4 }}>
+    <Screen contentStyle={{ paddingTop: 4 }} refreshing={refreshing} onRefresh={onRefresh}>
       <Text style={[textStyles.appLogo, { color: colors.ink, marginBottom: 12 }]}>profile</Text>
 
       <View style={styles.idCard}>

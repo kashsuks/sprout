@@ -1,16 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { avatarColorFor, colors } from '@/theme/colors';
 import { fonts, textStyles } from '@/theme/typography';
 import { Screen } from '@/components/Screen';
 import { useLeaderboard } from '@/api/hooks/leaderboard';
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 
 export default function RanksScreen() {
-  const { data, isLoading } = useLeaderboard();
+  const { data, isLoading, refetch } = useLeaderboard();
   const rows = data?.leaderboard ?? [];
 
+  useRefetchOnFocus(refetch);
+  const [refreshing, setRefreshing] = useState(false);
+  async function onRefresh() {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }
+
   return (
-    <Screen contentStyle={{ paddingTop: 4 }}>
+    <Screen contentStyle={{ paddingTop: 4 }} refreshing={refreshing} onRefresh={onRefresh}>
       <Text style={[textStyles.appLogo, { color: colors.ink, marginBottom: 12 }]}>ranks</Text>
 
       {isLoading ? (

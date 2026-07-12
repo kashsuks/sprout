@@ -1,5 +1,5 @@
 import React from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/theme/colors';
 
@@ -8,6 +8,9 @@ type ScreenProps = {
   /** Set false for screens that manage their own scroll (rare). */
   scroll?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
+  /** Pass both to enable pull-to-refresh. */
+  refreshing?: boolean;
+  onRefresh?: () => void;
 };
 
 /**
@@ -20,7 +23,7 @@ type ScreenProps = {
  *  3. KeyboardAvoidingView so text inputs (caption, custom task) aren't
  *     covered by the keyboard on smaller phones.
  */
-export function Screen({ children, scroll = true, contentStyle }: ScreenProps) {
+export function Screen({ children, scroll = true, contentStyle, refreshing, onRefresh }: ScreenProps) {
   const insets = useSafeAreaInsets();
 
   const body = scroll ? (
@@ -29,6 +32,11 @@ export function Screen({ children, scroll = true, contentStyle }: ScreenProps) {
       contentContainerStyle={[{ paddingBottom: insets.bottom + 24 }, contentStyle]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl refreshing={refreshing ?? false} onRefresh={onRefresh} tintColor={colors.stamp} />
+        ) : undefined
+      }
     >
       {children}
     </ScrollView>

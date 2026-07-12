@@ -5,19 +5,30 @@ import { fonts, textStyles } from '@/theme/typography';
 import { Screen } from '@/components/Screen';
 import { useGoals } from '@/api/hooks/goals';
 import { useLinkableFriends, useLinkDuo } from '@/api/hooks/duo';
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 
 export default function LinkDuoScreen() {
-  const { data: goalsData, isLoading: goalsLoading } = useGoals();
+  const { data: goalsData, isLoading: goalsLoading, refetch: refetchGoals } = useGoals();
   const goals = goalsData?.goals ?? [];
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const selectedGoal = goals.find((g) => g._id === selectedGoalId) ?? null;
 
-  const { data: friendsData, isLoading: friendsLoading } = useLinkableFriends(selectedGoal?.title ?? '');
+  const { data: friendsData, isLoading: friendsLoading, refetch: refetchFriends } = useLinkableFriends(selectedGoal?.title ?? '');
   const linkDuo = useLinkDuo();
   const friends = friendsData?.friends ?? [];
 
+  useRefetchOnFocus(refetchGoals);
+  const [refreshing, setRefreshing] = useState(false);
+  async function onRefresh() {
+    setRefreshing(true);
+    const refetches: Promise<unknown>[] = [refetchGoals()];
+    if (selectedGoal) refetches.push(refetchFriends());
+    await Promise.all(refetches);
+    setRefreshing(false);
+  }
+
   return (
-    <Screen contentStyle={{ paddingTop: 4 }}>
+    <Screen contentStyle={{ paddingTop: 4 }} refreshing={refreshing} onRefresh={onRefresh}>
       <Text style={[textStyles.appLogo, { color: colors.ink }]}>link duo</Text>
       <Text style={styles.subtitle}>pick one of your tasks, then a friend to link it with</Text>
 
