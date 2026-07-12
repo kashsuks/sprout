@@ -20,7 +20,15 @@
     },
     "android": {
       "package": "com.sprout.app",
-      "permissions": ["READ_CONTACTS", "CAMERA"]
-    }
+      "permissions": [
+        "READ_CONTACTS",
+        "CAMERA"
+      ]
+    },
+    "plugins": [
+      "expo-font",
+      "expo-secure-store",
+      "expo-asset"
+    ]
   }
 }

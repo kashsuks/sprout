@@ -277,7 +277,7 @@ export default function ProfileScreen({ navigation }: any) {
             >
               <View style={styles.stripInner}>
                 {barPhotos.map((p, i) => (
-                  <View key={p.id} style={styles.filmPhoto} ref={(r) => (slotRefs.current[i] = r)}>
+                  <View key={p.id} style={styles.filmPhoto} ref={(r) => { slotRefs.current[i] = r; }}>
                     <Image source={{ uri: p.uri }} style={StyleSheet.absoluteFillObject as any} resizeMode="cover" />
                   </View>
                 ))}

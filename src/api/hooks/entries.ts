@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import { File } from 'expo-file-system';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/api/client';
 
@@ -34,7 +34,7 @@ export function useCompleteGoal() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: CompleteGoalInput) => {
-      const photoData = await FileSystem.readAsStringAsync(input.photoUri, { encoding: FileSystem.EncodingType.Base64 });
+      const photoData = await new File(input.photoUri).base64();
 
       return apiFetch<{ entry: Entry; user: { points: number; currency: number; currentStreak: number }; newlyEarnedPins: string[] }>(
         '/entries',
