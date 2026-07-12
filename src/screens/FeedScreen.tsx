@@ -112,7 +112,11 @@ export default function FeedScreen({ navigation }: any) {
           const avatarColor = avatarColorFor(entry.author?.username ?? entry._id);
           return (
             <View key={entry._id} style={styles.visaCard}>
-              <View style={styles.visaHeader}>
+              <Pressable
+                style={styles.visaHeader}
+                disabled={!entry.author}
+                onPress={() => navigation?.navigate('UserProfile', { userId: entry.author!._id })}
+              >
                 <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
                   <Text style={styles.avatarText}>{name[0]?.toUpperCase()}</Text>
                 </View>
@@ -120,7 +124,7 @@ export default function FeedScreen({ navigation }: any) {
                   <Text style={styles.visaName}>{name}</Text>
                   <Text style={styles.visaTask}>{entry.taskTitle}</Text>
                 </View>
-              </View>
+              </Pressable>
 
               <View style={styles.visaPhoto}>
                 <Image source={{ uri: entry.photoUrl }} style={StyleSheet.absoluteFillObject as any} resizeMode="cover" />

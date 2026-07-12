@@ -7,6 +7,7 @@ import { colors } from '@/theme/colors';
 import { FeedIcon, LeaderboardIcon, NewEntryIcon, SquadIcon, ProfileIcon } from '@/components/TabIcons';
 
 import FeedScreen from '@/screens/FeedScreen';
+import UserProfileScreen from '@/screens/UserProfileScreen';
 import RanksScreen from '@/screens/RanksScreen';
 import TasksScreen from '@/screens/TasksScreen';
 import CompleteStampScreen from '@/screens/CompleteStampScreen';
@@ -17,9 +18,20 @@ import ProfileScreen from '@/screens/ProfileScreen';
 import WrappedScreen from '@/screens/WrappedScreen';
 
 const Tab = createBottomTabNavigator();
+const FeedStack = createNativeStackNavigator();
 const TasksStack = createNativeStackNavigator();
 const SquadStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
+
+// Feed tab also hosts the read-only profile view reached by tapping a post's author.
+function FeedStackNavigator() {
+  return (
+    <FeedStack.Navigator screenOptions={{ headerShown: false }}>
+      <FeedStack.Screen name="FeedHome" component={FeedScreen} />
+      <FeedStack.Screen name="UserProfile" component={UserProfileScreen} />
+    </FeedStack.Navigator>
+  );
+}
 
 // Tasks tab hosts a two-step flow: the task list and stamping a task complete.
 function TasksStackNavigator() {
@@ -73,7 +85,7 @@ export default function RootNavigator() {
       >
         <Tab.Screen
           name="Feed"
-          component={FeedScreen}
+          component={FeedStackNavigator}
           options={{ tabBarIcon: ({ focused }) => <FeedIcon active={focused} /> }}
         />
         <Tab.Screen
