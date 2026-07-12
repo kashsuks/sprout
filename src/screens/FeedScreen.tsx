@@ -137,18 +137,17 @@ export default function FeedScreen({ navigation }: any) {
 
               {entry.caption ? <Text style={styles.visaCaption}>{entry.caption}</Text> : null}
 
-              <Pressable
-                style={styles.likeRow}
-                hitSlop={8}
-                onPress={() => toggleLike.mutate({ entryId: entry._id, like: !entry.likedByMe })}
-              >
-                <HeartIcon size={19} filled={entry.likedByMe} />
-                <Text style={[styles.likeCount, entry.likedByMe && { color: colors.stamp }]}>
-                  {entry.likeCount}
-                </Text>
-              </Pressable>
-
-              <View style={styles.visaStats}>
+              <View style={styles.statsRow}>
+                <Pressable
+                  style={styles.likeRow}
+                  hitSlop={8}
+                  onPress={() => toggleLike.mutate({ entryId: entry._id, like: !entry.likedByMe })}
+                >
+                  <HeartIcon size={19} filled={entry.likedByMe} />
+                  <Text style={[styles.likeCount, entry.likedByMe && { color: colors.stamp }]}>
+                    {entry.likeCount}
+                  </Text>
+                </Pressable>
                 <Text style={styles.visaStatsText}>+{entry.pointsAwarded} points</Text>
               </View>
             </View>
@@ -248,20 +247,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(244,236,216,0.92)',
   },
 
-  visaCaption: { ...textStyles.caption, color: colors.ink, marginBottom: 6 },
+  visaCaption: { ...textStyles.caption, color: colors.ink, marginBottom: 4 },
 
-  likeRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
-  likeCount: { fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkSoft },
-
-  visaStats: {
+  statsRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 7,
+    marginTop: -3,
+    paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: colors.line,
     borderStyle: 'dashed',
   },
+  likeRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  likeCount: { fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkSoft },
   visaStatsText: { fontFamily: fonts.monoBold, fontSize: 9, color: colors.forest },
 });
