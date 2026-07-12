@@ -49,22 +49,61 @@ const auth = (token: string) => ["Authorization", `Bearer ${token}`] as const;
 const photoFields = { photoData: Buffer.from("fake-image-bytes").toString("base64"), photoContentType: "image/jpeg" };
 
 describe("GET /api/v1/leaderboard/friends", () => {
-  it("ranks the caller and friends by points, excluding strangers", async () => {
-    const alice = await createUser("alice", { points: 30 });
-    const bob = await createUser("bob", { points: 50 });
+  it("includes the caller and friends with points/streak, excluding strangers", async () => {
+    const alice = await createUser("alice", { points: 30, currentStreak: 2 });
+    const bob = await createUser("bob", { points: 50, currentStreak: 5 });
     const stranger = await createUser("stranger", { points: 999 });
     await befriend(alice.id, bob.id);
     void stranger;
 
     const app = createApp();
     const res = await request(app)
-      .get("/api/v1/leaderboard/friends")
+      .get("/api/v1/leaderboard/friends?localDate=2026-07-13")
       .set(...auth("alice"));
 
     expect(res.status).toBe(200);
-    expect(res.body.leaderboard.map((r: { username: string }) => r.username)).toEqual(["bob", "alice"]);
-    expect(res.body.leaderboard[0].rank).toBe(1);
-    expect(res.body.leaderboard[1]).toMatchObject({ username: "alice", me: true });
+    const usernames = res.body.leaderboard.map((r: { username: string }) => r.username).sort();
+    expect(usernames).toEqual(["alice", "bob"]);
+    const aliceRow = res.body.leaderboard.find((r: { username: string }) => r.username === "alice");
+    expect(aliceRow).toMatchObject({ points: 30, currentStreak: 2, todayPoints: 0, me: true });
+    const bobRow = res.body.leaderboard.find((r: { username: string }) => r.username === "bob");
+    expect(bobRow).toMatchObject({ points: 50, currentStreak: 5, me: false });
+  });
+
+  it("400s without a localDate query param", async () => {
+    await createUser("alice");
+    const app = createApp();
+    const res = await request(app).get("/api/v1/leaderboard/friends").set(...auth("alice"));
+    expect(res.status).toBe(400);
+  });
+
+  it("sums today's entry points per friend into todayPoints", async () => {
+    const alice = await createUser("alice");
+    const goal = await Goal.create({
+      userId: alice._id,
+      title: "stretch",
+      source: "custom",
+      recurrence: { type: "daily" },
+      timezone: "UTC",
+    });
+    const app = createApp();
+
+    await request(app)
+      .post("/api/v1/entries")
+      .set(...auth("alice"))
+      .send({
+        goalId: goal.id,
+        photoData: Buffer.from("x").toString("base64"),
+        photoContentType: "image/jpeg",
+        localDate: "2026-07-13",
+      });
+
+    const res = await request(app)
+      .get("/api/v1/leaderboard/friends?localDate=2026-07-13")
+      .set(...auth("alice"));
+
+    const aliceRow = res.body.leaderboard.find((r: { username: string }) => r.username === "alice");
+    expect(aliceRow.todayPoints).toBeGreaterThan(0);
   });
 });
 
