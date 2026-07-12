@@ -4,13 +4,15 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/theme/colors';
-import { FeedIcon, LeaderboardIcon, NewEntryIcon, SquadIcon, ProfileIcon } from '@/components/TabIcons';
+import { FeedIcon, LeaderboardIcon, NewEntryIcon, GardenIcon, ShopIcon, SquadIcon, ProfileIcon } from '@/components/TabIcons';
 
 import FeedScreen from '@/screens/FeedScreen';
 import UserProfileScreen from '@/screens/UserProfileScreen';
 import RanksScreen from '@/screens/RanksScreen';
 import TasksScreen from '@/screens/TasksScreen';
 import CompleteStampScreen from '@/screens/CompleteStampScreen';
+import GardenScreen from '@/screens/GardenScreen';
+import ShopScreen from '@/screens/ShopScreen';
 import SquadScreen from '@/screens/SquadScreen';
 import LinkDuoScreen from '@/screens/LinkDuoScreen';
 import AddFriendsScreen from '@/screens/AddFriendsScreen';
@@ -99,6 +101,16 @@ export default function RootNavigator() {
           name="Tasks"
           component={TasksStackNavigator}
           options={{ tabBarIcon: ({ focused }) => <NewEntryIcon active={focused} size={26} /> }}
+        />
+        <Tab.Screen
+          name="Garden"
+          component={GardenScreen}
+          options={{ tabBarIcon: ({ focused }) => <GardenIcon active={focused} size={26} /> }}
+        />
+        <Tab.Screen
+          name="Shop"
+          component={ShopScreen}
+          options={{ tabBarIcon: ({ focused }) => <ShopIcon active={focused} size={26} /> }}
         />
         <Tab.Screen
           name="SquadTab"

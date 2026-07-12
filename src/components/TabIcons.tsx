@@ -65,3 +65,27 @@ export function ProfileIcon({ active, size = 19 }: IconProps) {
     </Svg>
   );
 }
+
+// Garden — plant/leaf sprout
+export function GardenIcon({ active, size = 19 }: IconProps) {
+  const c = iconColor(active);
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 22V8" stroke={c} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M5 12c0-4 3-7 7-7s7 3 7 7" stroke={c} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M12 18a3 3 0 100-6 3 3 0 000 6z" stroke={c} strokeWidth={strokeWidth} />
+      <Path d="M8 22h8" stroke={c} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+// Shop — shopping bag
+export function ShopIcon({ active, size = 19 }: IconProps) {
+  const c = iconColor(active);
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M3 9h18l-1.5 9H4.5L3 9z" stroke={c} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M8 9V6a4 4 0 018 0v3" stroke={c} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
